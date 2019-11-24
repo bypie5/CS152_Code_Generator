@@ -5,7 +5,7 @@
 #include "stdlib.h"
 #include "string.h"
 
-#define SIZE 20
+#define SIZE 50
 #define SHIFT 4
 
 typedef enum {m_void, m_int, m_array} M_TYPE;
@@ -15,7 +15,10 @@ typedef struct Entry Entry;
 struct Entry {
 	char* key;
 	Entry* next;		
+	
+	// Attributes
 	M_TYPE type;
+	int val;
 };
 
 Entry* Table[SIZE];
@@ -25,19 +28,20 @@ Entry* make_entry(char* key) {
 	
 	new_entry->key = key;
 	new_entry->next = 0;
-	new_entry->type = ml_void;
-	new_entry->mil = 0;
-	new_entry->name = 0;
+	
+	// Give the attributes temp vals
+	new_entry->type = m_void;
+	new_entry->val = 0;
 
 	return new_entry;
 }
 
-void set_mil(Entry* e, char* new_mil) {
-	e->mil = new_mil;
+void set_type(Entry* e, M_TYPE t) {
+	e->type = t;	
 }
 
-void set_name(Entry* e, char* new_name) {
-	e->name = new_name;
+void set_val(Entry* e, int v) {
+	e->val = v;
 }
 
 void init_table(Entry** table, int size) {
@@ -56,11 +60,33 @@ int hash(char* key) {
 	return temp;
 }
 
+int lookup(Entry** table, char* key) {
+	int target_hash = hash(key);
+
+	// The location is empty
+	if (!table[target_hash]) return -1;
+
+	// The location is not empty, traverse it
+	int loc = 0;
+	Entry* curr = table[target_hash];
+	while (curr) {
+		if (strcmp(curr->key, key) == 0) {
+			return loc;
+		}
+		curr = curr->next;
+		loc++;
+	}
+
+	return -1;
+}
+
 void insert(Entry** table, char* key) {
 	int curr_hash = hash(key);
 
+	printf("inserting %s...\n", key);
+
 	// Already in the table
-	if (lookup(table, key)) return;
+	if (lookup(table, key) >= 0) return;
 	
 	if (!table[curr_hash]) {
 		table[curr_hash] = make_entry(key);
@@ -70,26 +96,9 @@ void insert(Entry** table, char* key) {
 			while (curr->next) {
 				curr = curr->next;
 			}
-			curr->next = malloc(sizeof(Entry*));
 			curr->next = make_entry(key);
 		}
 	}
-}
-
-int lookup(Entry** table, char* key) {
-	int target_hash = hash(key);
-
-	if (!table[target_hash]) return 0;
-
-	Entry* curr = table[target_hash];
-	while (curr) {
-		if (strcmp(curr->key, key) == 0) {
-			return 1;
-		}
-		curr = curr->next;
-	}
-
-	return 0;
 }
 
 // Debug usage

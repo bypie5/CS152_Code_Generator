@@ -1,10 +1,20 @@
 %{
 	#include <stdio.h>
 	#include <stdlib.h>
+	#include "symbol_table.h"
+	
+	#define BUFFER_SIZE 25
+
 	void yyerror(const char* msg);
 	extern int curr_line;
 	extern int curr_pos;
 	FILE * yyin;
+
+	char* create_key(char* s) {
+		char* key = malloc(sizeof(char)*BUFFER_SIZE);
+		sprintf(key, "%s", s);
+		return key;
+	}
 %}
 
 %union {
@@ -23,126 +33,128 @@
 %nonassoc UMINUS
 
 %%
-input:			  {printf("input -> epsilon\n");}
-	 	| program {printf("input -> program\n");}
+input:			  {}
+	 	| program {}
 		;
 
-program: functions {printf("program -> functions\n");};
+program: functions {};
+	   
 
-functions: 	function {printf("functions -> function\n");}
-		 	| function functions {printf("functions -> function function\n");}
+functions: 	function {}
+		 	| function functions {}			
 			;
 
-function: FUNCTION IDENT SEMICOLON BEGIN_PARAMS declarations END_PARAMS BEGIN_LOCALS declarations END_LOCALS BEGIN_BODY statements END_BODY {printf("function -> FUNCTION IDENT SEMICOLON BEGIN_PARAMS declarations END_PARAMS BEGIN_LOCALS declarations END_LOCALS BEGIN_BODY statements END_BODY\n");}
+function: FUNCTION IDENT SEMICOLON BEGIN_PARAMS declarations END_PARAMS BEGIN_LOCALS declarations END_LOCALS BEGIN_BODY statements END_BODY {}
 		;
 
-declarations: 		{printf("declarations -> epsilon\n");}
-				| declaration SEMICOLON declarations {printf("declarations -> declaration SEMICOLON declarations\n");}
+declarations: 		{}
+				| declaration SEMICOLON declarations {}
 				;
 
-declaration: identifiers COLON declaration_prime {printf("declaration -> identifiers COLON declaration_prime\n");};
+declaration: identifiers COLON declaration_prime {};
 
-declaration_prime: INTEGER {printf("declaration_prime -> INTEGER\n");}
-				 | ARRAY L_SQUARE_BRACKET NUMBER R_SQUARE_BRACKET OF INTEGER {printf("declaration_prime -> ARRAY L_SQUARE_BRACKET NUMBER R_SQUARE_BRACKET OF INTEGER\n");};
+declaration_prime: INTEGER {}
+				 | ARRAY L_SQUARE_BRACKET NUMBER R_SQUARE_BRACKET OF INTEGER {};
 
-identifiers: identifier {printf("identifiers -> identifier\n");}
-		   | identifier COMMA identifiers {printf("identifiers -> identifier COMMA identifiers\n");}
+identifiers: identifier {}
+		   | identifier COMMA identifiers {}
 		   ;
 
-identifier: IDENT {printf("identifier -> IDENT_%s\n", $1);};
+identifier: IDENT { insert(Table, create_key($1)); };
 
-statements:		statement SEMICOLON {printf("statements -> statement SEMICOLON\n");}
-		  		| statement SEMICOLON statements {printf("statements -> statement SEMICOLON statements\n");}
+statements:		statement SEMICOLON {}
+		  		| statement SEMICOLON statements {}
 				;
 
-statement: var ASSIGN expression {printf("statement -> var ASSIGN expression\n");}
-		 | RETURN expression {printf("statement -> RETURN expression\n");}
-		 | CONTINUE {printf("statement -> CONTINUE\n");}
-		 | IF boolexpr THEN statements else_prime ENDIF {printf("statement -> IF boolexpr THEN statements else_prime ENDIF\n");}
-		 | WHILE boolexpr BEGINLOOP statements ENDLOOP {printf("statement -> WHILE boolexpr BEGINLOOP statements ENDLOOP\n");}
-		 | DO BEGINLOOP statements ENDLOOP WHILE boolexpr {printf("statement -> DO BEGINLOOP statements ENDLOOP WHILE boolexpr\n");}
-		 | READ vars {printf("statement -> READ vars\n");}
-		 | WRITE vars {printf("statement -> WRITE vars\n");}
+statement: var ASSIGN expression {}
+		 | RETURN expression {}
+		 | CONTINUE {}
+		 | IF boolexpr THEN statements else_prime ENDIF {}
+		 | WHILE boolexpr BEGINLOOP statements ENDLOOP {}
+		 | DO BEGINLOOP statements ENDLOOP WHILE boolexpr {}
+		 | READ vars {}
+		 | WRITE vars {}
 		 ;
 
-else_prime:		{printf("else_prime -> epsilon\n");} 
-		  |	ELSE statements	{printf("else_prime -> ELSE statements\n");}		
+else_prime:		{} 
+		  |	ELSE statements	{}		
 		  ;
 
-vars: 	var {printf("vars -> var\n");}
-	|	var COMMA vars {printf("vars -> var COMMA vars\n");}
+vars: 	var {}
+	|	var COMMA vars {}
 	;
 
-comp: EQ	{printf("comp -> EQ\n");}
-	| NEQ 	{printf("comp -> NEQ\n");}
-	| LT 	{printf("comp -> LT\n");}
-	| GT	{printf("comp -> GT\n");}
-	| LTE	{printf("comp -> LTE\n");}
-	| GTE	{printf("comp -> GTE\n");}
+comp: EQ	{}
+	| NEQ 	{}
+	| LT 	{}
+	| GT	{}
+	| LTE	{}
+	| GTE	{}
 	;
 
-var: identifier {printf("var -> identifier\n");}
-   	| identifier L_SQUARE_BRACKET expression R_SQUARE_BRACKET {printf("var -> identifier L_SQUARE_BRACKET expression R_SQUARE_BRACKET\n");};
+var: identifier {}
+   	| identifier L_SQUARE_BRACKET expression R_SQUARE_BRACKET {};
 
-expression: multiplicative_expr multiplicative_exprs {printf("expression -> multiplicative_expr multiplicative_exprs\n");}
+expression: multiplicative_expr multiplicative_exprs {}
 		  ;
 
-multiplicative_exprs:	{printf("multiplicative_exprs -> epsilon\n");} 
-					| SUB multiplicative_expr multiplicative_exprs {printf("multiplicative_exprs -> SUB multiplicative_expr multiplicative_exprs\n");} 
-					| ADD multiplicative_expr multiplicative_exprs {printf("multiplicative_exprs -> ADD multiplicative_expr multiplicative_exprs\n");} 
+multiplicative_exprs:	{} 
+					| SUB multiplicative_expr multiplicative_exprs {} 
+					| ADD multiplicative_expr multiplicative_exprs {} 
 
 					;
 
-multiplicative_expr: term terms {printf("multiplicative_expr -> term terms\n");}
+multiplicative_expr: term terms {}
 					;
 
-terms:	{printf("terms -> epsilon\n");} 
-	 | MULT term terms {printf("terms -> MULT term terms\n");}
-	 | DIV term terms {printf("terms -> DIV term terms\n");}
-	 | MOD term terms {printf("terms -> MOD term terms\n");} 
+terms:	{} 
+	 | MULT term terms {}
+	 | DIV term terms {}
+	 | MOD term terms {} 
 	 ;
 
-boolexpr: relation_and_expr r_a_es {printf("boolexpr -> relation_and_expr r_a_es\n");}
-			;
+boolexpr: relation_and_expr r_a_es {}
+		;
 
-r_a_es: 	{printf("r_a_es -> epsilon\n");}
-	  |  OR relation_and_expr r_a_es {printf("r_a_es -> OR relation_and_expr r_a_es\n");}
+r_a_es: 	{}
+	  |  OR relation_and_expr r_a_es {}
 	  ;
 
-relation_and_expr: relation_expr r_es {printf("relation_and_expr -> relation_expr r_es\n");} 
+relation_and_expr: relation_expr r_es {} 
 				 ;
 
-r_es: 	{printf("r_es -> epsilon\n");}
-	| AND relation_expr r_es {printf("r_es -> AND relation_expr r_es\n");}
+r_es: 	{}
+	| AND relation_expr r_es {}
 	;
 
-relation_expr:  expression comp expression {printf("relation_expr -> expression comp expression\n");}
-			 | TRUE {printf("relation_expr -> TRUE\n");}
-			 | FALSE {printf("relation_expr -> FALSE\n");}
-			 | L_PAREN boolexpr R_PAREN {printf("relation_expr -> L_PAREN boolexpr R_PAREN\n");}
-			 | NOT expression comp expression {printf("relation_expr -> NOT expression comp expression\n");}
-			 | NOT TRUE {printf("relation_expr -> NOT TRUE\n");}
-			 | NOT FALSE {printf("relation_expr -> NOT FALSE\n");}
-			 | NOT L_PAREN boolexpr R_PAREN {printf("relation_expr -> NOT L_PAREN boolexpr R_PAREN\n");}
+relation_expr:  expression comp expression {}
+			 | TRUE {}
+			 | FALSE {}
+			 | L_PAREN boolexpr R_PAREN {}
+			 | NOT expression comp expression {}
+			 | NOT TRUE {}
+			 | NOT FALSE {}
+			 | NOT L_PAREN boolexpr R_PAREN {}
 			 ;
 
-term: var  {printf("term -> var\n");}
-	| NUMBER {printf("term -> NUMBER\n");}
-	| L_PAREN expression R_PAREN {printf("term -> L_PAREN expression R_PAREN\n");}
-	| SUB var %prec UMINUS {printf("term -> SUB var\n");}
-	| SUB NUMBER %prec UMINUS {printf("term -> SUB NUMBER\n");}
-	| SUB L_PAREN expression R_PAREN %prec UMINUS {printf("term -> SUB L_PAREN expression R_PAREN\n");}
-	| identifier L_PAREN expressions R_PAREN {printf("term -> identifier L_PAREN expressions R_PAREN\n");}
+term: var  {}
+	| NUMBER {}
+	| L_PAREN expression R_PAREN {}
+	| SUB var %prec UMINUS {}
+	| SUB NUMBER %prec UMINUS {}
+	| SUB L_PAREN expression R_PAREN %prec UMINUS {}
+	| identifier L_PAREN expressions R_PAREN {}
 	;
 
-expressions: expression {printf("expressions -> expression\n");}
-		   | expression expressions COMMA {printf("expressions -> expression expressions COMMA\n");}
+expressions: expression {}
+		   | expression expressions COMMA {}
 		   ;
 
 %%
 
 
 int main(int argc, char** argv) {
+	init_table(Table, SIZE);
 	if (argc > 1) {
 		yyin = fopen(argv[1], "r");
 		if (yyin == NULL) {
@@ -150,6 +162,7 @@ int main(int argc, char** argv) {
 		}
 	}
 	yyparse();
+	print(Table, SIZE);
 	return 0;
 }
 
