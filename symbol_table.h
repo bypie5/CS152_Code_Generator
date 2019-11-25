@@ -5,12 +5,34 @@
 #include "stdlib.h"
 #include "string.h"
 
-#define SIZE 50
-#define SHIFT 4
+#define T_SIZE 25
+#define T_SHIFT 4
 
+// Attributes
 typedef enum {m_void, m_int, m_array} M_TYPE;
-
 typedef struct Entry Entry;
+Entry* Table[T_SIZE];
+
+char* M_TYPE_To_String(M_TYPE t) {
+	switch (t)
+	{
+		case m_void:
+			return "m_void";
+			break;
+		
+		case m_int:
+			return "m_int";
+			break;
+
+		case m_array:
+			return "m_array";
+			break;
+
+		default:
+			return "NO STRING CONVERSION";
+			break;
+	}
+}
 
 struct Entry {
 	char* key;
@@ -18,34 +40,20 @@ struct Entry {
 	
 	// Attributes
 	M_TYPE type;
-	int val;
+	char* val;
 };
 
-Entry* Table[SIZE];
-
-Entry* make_entry(char* key) {
+Entry* make_entry(char* key, M_TYPE t) {
 	Entry* new_entry = (Entry*)malloc(sizeof(Entry));
 	
 	new_entry->key = key;
 	new_entry->next = 0;
 	
 	// Give the attributes temp vals
-	new_entry->type = m_void;
+	new_entry->type = t;
 	new_entry->val = 0;
 
 	return new_entry;
-}
-
-void set_type(Entry* e, M_TYPE t) {
-	e->type = t;	
-}
-
-void set_val(Entry* e, int v) {
-	e->val = v;
-}
-
-void init_table(Entry** table, int size) {
-	table = malloc(sizeof(Entry)*size);
 }
 
 // Louden
@@ -53,22 +61,22 @@ int hash(char* key) {
 	int temp = 0;
 	int i = 0;
 	while (key[i] != '\0') {
-		temp = ((temp << SHIFT) + key[i]) % SIZE;
+		temp = ((temp << T_SHIFT) + key[i]) % T_SIZE;
 		++i;
 	}
 
 	return temp;
 }
 
-int lookup(Entry** table, char* key) {
+int lookup(char* key) {
 	int target_hash = hash(key);
 
 	// The location is empty
-	if (!table[target_hash]) return -1;
+	if (!Table[target_hash]) return -1;
 
 	// The location is not empty, traverse it
 	int loc = 0;
-	Entry* curr = table[target_hash];
+	Entry* curr = Table[target_hash];
 	while (curr) {
 		if (strcmp(curr->key, key) == 0) {
 			return loc;
@@ -80,36 +88,36 @@ int lookup(Entry** table, char* key) {
 	return -1;
 }
 
-void insert(Entry** table, char* key) {
+void insert(char* key, M_TYPE t) {
 	int curr_hash = hash(key);
 
 	printf("inserting %s...\n", key);
 
 	// Already in the table
-	if (lookup(table, key) >= 0) return;
-	
-	if (!table[curr_hash]) {
-		table[curr_hash] = make_entry(key);
+	if (lookup(key) >= 0) return;
+
+	if (!Table[curr_hash]) {
+		Table[curr_hash] = make_entry(key, t);
 	} else {
-		Entry* curr = table[curr_hash];
-		if (curr) {	
+		Entry* curr = Table[curr_hash];
+		if (curr) {
 			while (curr->next) {
 				curr = curr->next;
 			}
-			curr->next = make_entry(key);
+			curr->next = make_entry(key, t);
 		}
 	}
 }
 
 // Debug usage
-void print(Entry** table, unsigned int size) {
+void print() {
 	int i = 0;
-	for (i = 0; i < size; i++) {
-		Entry* curr = table[i];
+	for (i = 0; i < T_SIZE; i++) {
+		Entry* curr = Table[i];
 		if (curr) {
-			printf("%d: %s", i, curr->key);
+			printf("%d: %s (%s)", i, curr->key, M_TYPE_To_String(curr->type));
 			while (curr->next) {
-				printf(" -> %s", curr->next->key);
+				printf(" -> %s (%s)", curr->next->key,  M_TYPE_To_String(curr->next->type));
 				curr = curr->next;
 			}
 			printf("\n");

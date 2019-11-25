@@ -1,13 +1,11 @@
 #include "symbol_table.h"
 
 int main() {
-	init_table(Table, SIZE);
+	insert("i", m_int);
+	insert("j", m_int);
+	insert("size", m_int);
+	insert("temp", m_int);
 
-	insert(Table, "i");
-	insert(Table, "j");
-	insert(Table, "size");
-	insert(Table, "temp");
-
-	print(Table, SIZE);
+	print();
 }
 

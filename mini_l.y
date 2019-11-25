@@ -10,7 +10,8 @@
 	extern int curr_pos;
 	FILE * yyin;
 
-	char* create_key(char* s) {
+	// Used to add a null-terminator to $<n>
+	char* stringify(char* s) {
 		char* key = malloc(sizeof(char)*BUFFER_SIZE);
 		sprintf(key, "%s", s);
 		return key;
@@ -53,14 +54,14 @@ declarations: 		{}
 
 declaration: identifiers COLON declaration_prime {};
 
-declaration_prime: INTEGER {}
-				 | ARRAY L_SQUARE_BRACKET NUMBER R_SQUARE_BRACKET OF INTEGER {};
+declaration_prime: INTEGER { insert(stringify($1), m_int); }
+				 | ARRAY L_SQUARE_BRACKET NUMBER R_SQUARE_BRACKET OF INTEGER { insert(stringify($1), m_array); };
 
 identifiers: identifier {}
 		   | identifier COMMA identifiers {}
 		   ;
 
-identifier: IDENT { insert(Table, create_key($1)); };
+identifier: IDENT { };
 
 statements:		statement SEMICOLON {}
 		  		| statement SEMICOLON statements {}
@@ -154,7 +155,6 @@ expressions: expression {}
 
 
 int main(int argc, char** argv) {
-	init_table(Table, SIZE);
 	if (argc > 1) {
 		yyin = fopen(argv[1], "r");
 		if (yyin == NULL) {
@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
 		}
 	}
 	yyparse();
-	print(Table, SIZE);
+	print();
 	return 0;
 }
 
