@@ -1,11 +1,16 @@
 #include "symbol_table.h"
 
 int main() {
-	insert("i", m_int);
-	insert("j", m_int);
-	insert("size", m_int);
-	insert("temp", m_int);
+	
+	/*modify_attr_type("not in the table", m_void);
+		
+	insert("i", m_void);
+	insert("j", m_void);
+	insert("size", m_void);
+	insert("temp", m_void);
 
-	print();
+	modify_attr_type("i", m_int);
+
+	print();*/
 }
 

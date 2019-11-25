@@ -5,13 +5,14 @@
 #include "stdlib.h"
 #include "string.h"
 
-#define T_SIZE 25
+#define T_SIZE 10
 #define T_SHIFT 4
 
 // Attributes
 typedef enum {m_void, m_int, m_array} M_TYPE;
 typedef struct Entry Entry;
 Entry* Table[T_SIZE];
+void print();
 
 char* M_TYPE_To_String(M_TYPE t) {
 	switch (t)
@@ -40,18 +41,15 @@ struct Entry {
 	
 	// Attributes
 	M_TYPE type;
+	double ival;
 	char* val;
 };
 
-Entry* make_entry(char* key, M_TYPE t) {
+Entry* make_entry(char* key) {
 	Entry* new_entry = (Entry*)malloc(sizeof(Entry));
 	
 	new_entry->key = key;
 	new_entry->next = 0;
-	
-	// Give the attributes temp vals
-	new_entry->type = t;
-	new_entry->val = 0;
 
 	return new_entry;
 }
@@ -68,44 +66,77 @@ int hash(char* key) {
 	return temp;
 }
 
+// Does the entry exist? This function gives the answer
 int lookup(char* key) {
 	int target_hash = hash(key);
 
 	// The location is empty
-	if (!Table[target_hash]) return -1;
+	if (!Table[target_hash]) return 0;
 
-	// The location is not empty, traverse it
-	int loc = 0;
+	// The location is not empty, traverse i
 	Entry* curr = Table[target_hash];
 	while (curr) {
-		if (strcmp(curr->key, key) == 0) {
-			return loc;
-		}
+		if (strcmp(curr->key, key) == 0) 
+			return 1;
 		curr = curr->next;
-		loc++;
 	}
 
-	return -1;
+	return 0;
 }
 
-void insert(char* key, M_TYPE t) {
+Entry* fetch(char* key) {
+	// Key is not found in the symbol table
+	if (!lookup(key)) {
+		printf("Key: \'%s\' is not in symbol table\n", key);
+		return 0;
+	}
+
+	int target_hash = hash(key);
+	// Traverse the hash list
+	Entry* curr = Table[target_hash];
+	while (curr) {
+		if (strcmp(curr->key, key) == 0)
+			return curr;
+		curr = curr->next;
+	}
+
+	printf("Something is really wrong with fetch\n");
+	return 0;
+}
+
+void insert(char* key) {
 	int curr_hash = hash(key);
 
-	printf("inserting %s...\n", key);
-
 	// Already in the table
-	if (lookup(key) >= 0) return;
+	if (lookup(key)) return;
 
 	if (!Table[curr_hash]) {
-		Table[curr_hash] = make_entry(key, t);
+		Table[curr_hash] = make_entry(key);
 	} else {
 		Entry* curr = Table[curr_hash];
 		if (curr) {
 			while (curr->next) {
 				curr = curr->next;
 			}
-			curr->next = make_entry(key, t);
+			curr->next = make_entry(key);
 		}
+	}
+}
+
+/* 
+ * Attribute modification functions
+*/
+void modify_attr_type(char* key, M_TYPE t) {
+	Entry* to_modify = fetch(key);
+	if (to_modify != 0) {
+		to_modify->type = t;
+	}
+}
+
+void modify_attr_ival(char* key, double d) {
+	Entry* to_modify = fetch(key);
+	if (to_modify != 0) {
+		to_modify->ival = d;
 	}
 }
 

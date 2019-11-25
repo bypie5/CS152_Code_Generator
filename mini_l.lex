@@ -1,5 +1,6 @@
 %{
 	#include "y.tab.h"
+	#include "stdlib.h"
 	int curr_line = 1;
 	int curr_col = 0;
 %}
@@ -17,7 +18,7 @@ beginlocals {curr_col += yyleng; return BEGIN_LOCALS;}
 endlocals {curr_col += yyleng; return END_LOCALS;}
 beginbody {curr_col += yyleng; return BEGIN_BODY;}
 endbody {curr_col += yyleng; return END_BODY;}
-integer {curr_col += yyleng; return INTEGER;}
+integer {curr_col += yyleng; return TYPE_INTEGER;}
 array {curr_col += yyleng; return ARRAY;}
 of {curr_col += yyleng; return OF;}
 if {curr_col += yyleng; return IF;}
@@ -51,7 +52,7 @@ return {curr_col += yyleng; return RETURN;}
 \<\= {curr_col += yyleng; return LTE;}
 \>\= {curr_col += yyleng; return GTE;}
 
-{NUMBER}+ {yylval.dval = atof(yytext); curr_col += yyleng; return NUMBER;}
+{NUMBER}+ {yylval.dval = atoi(yytext); curr_col += yyleng; return INTEGER;}
 
 {LETTER}({LETTER}|{NUMBER}|{CHARS})*_ {printf("Error at line %d, column %d: identifier \"%s\" cannot end with an underscore\n", curr_line, curr_col, yytext); return 1;} 
 
