@@ -1453,7 +1453,7 @@ yyreduce:
 
   case 7:
 #line 94 "mini_l.y" /* yacc.c:1646  */
-    { printf("func %s\n", (yyvsp[0].string_list)); }
+    { sprintf(codestr, "func %s", (yyvsp[0].string_list)); emitCode(codestr); }
 #line 1458 "y.tab.c" /* yacc.c:1646  */
     break;
 
@@ -2075,7 +2075,6 @@ int main(int argc, char** argv) {
 		}
 	}
 	yyparse();
-	print();
 	return 0;
 }
 

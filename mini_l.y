@@ -91,7 +91,7 @@ functions: 	function { }
 		 	| function functions {}			
 			;
 
-function: FUNCTION IDENT { printf("func %s\n", $2); } SEMICOLON BEGIN_PARAMS declarations END_PARAMS BEGIN_LOCALS declarations END_LOCALS BEGIN_BODY statements END_BODY {}
+function: FUNCTION IDENT { sprintf(codestr, "func %s", $2); emitCode(codestr); } SEMICOLON BEGIN_PARAMS declarations END_PARAMS BEGIN_LOCALS declarations END_LOCALS BEGIN_BODY statements END_BODY {}
 		;
 
 declarations: 		{}
