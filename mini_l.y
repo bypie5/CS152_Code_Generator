@@ -10,25 +10,22 @@
 	extern int curr_line;
 	extern int curr_pos;
 	FILE * yyin;
-
-	// Used to add a null-terminator to $<n>
-	char* stringify(char* s) {
-		char* key = malloc(sizeof(char)*BUFFER_SIZE);
-		sprintf(key, "%s", s);
-		return key;
-	}
 %}
 
 %union {
 	double dval;
 	char* string_list;
-	/*struct {
-		int type; 
-		char* name;
-		double val;
-	} attributes;*/
-
-	struct Entry* e;
+	struct Entry* entry;
+	
+	struct typeNode {
+		int t;
+		int size;
+	} typeNode;
+	
+	struct string_vector {
+		int count;
+		char* strings[75];
+	} string_vector;
 }
 
 %error-verbose
@@ -36,7 +33,10 @@
 %start input
 %token <dval> INTEGER
 %token <string_list> IDENT
-%type <attributes> input
+%type <entry> input
+%type <string_list> identifier
+%type <typeNode> declaration_prime
+%type <string_vector> identifiers
 %left ADD SUB
 %left MULT DIV MOD
 %nonassoc UMINUS
@@ -62,11 +62,11 @@ declarations: 		{}
 
 declaration: identifiers COLON declaration_prime {};
 
-declaration_prime: TYPE_INTEGER { }
-				 | ARRAY L_SQUARE_BRACKET INTEGER R_SQUARE_BRACKET OF TYPE_INTEGER { };
+declaration_prime: TYPE_INTEGER { $$.t = m_int; }
+				 | ARRAY L_SQUARE_BRACKET INTEGER R_SQUARE_BRACKET OF TYPE_INTEGER { $$.t = m_array; $$.size = (int) $3; };
 
-identifiers: identifier { }
-		   | identifier COMMA identifiers { } 
+identifiers: identifier { $$.strings[$$.count] = $1; $$.count++; }
+		   | identifier COMMA identifiers {$$.strings[$$.count] = $1; $$.count++; } 
 		   ;
 
 identifier: IDENT { };
@@ -169,6 +169,7 @@ int main(int argc, char** argv) {
 		}
 	}
 	yyparse();
+	print();
 	return 0;
 }
 

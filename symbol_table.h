@@ -12,6 +12,18 @@
 typedef enum {m_void, m_int, m_array} M_TYPE;
 typedef struct Entry Entry;
 Entry* Table[T_SIZE];
+
+struct Entry {
+	Entry* next;		
+	
+	// Attributes
+	char* key;
+	M_TYPE type;
+	double i_const_val; // Only valid if type == m_int
+	int arr_size; // Only valid if type == m_array
+};
+
+// Function declarations
 void print();
 
 char* M_TYPE_To_String(M_TYPE t) {
@@ -35,21 +47,14 @@ char* M_TYPE_To_String(M_TYPE t) {
 	}
 }
 
-struct Entry {
-	char* key;
-	Entry* next;		
-	
-	// Attributes
-	M_TYPE type;
-	double i_const_val;
-	int arr_size;
-};
-
 Entry* make_entry(char* key) {
 	Entry* new_entry = (Entry*)malloc(sizeof(Entry));
 	
 	new_entry->key = key;
 	new_entry->next = 0;
+	new_entry->type = m_void;
+	new_entry->i_const_val = 0;
+	new_entry->arr_size = 0;
 
 	return new_entry;
 }
@@ -145,11 +150,6 @@ void set_attr_arr_size(char* key, int s) {
 	if (to_modify != 0) {
 		to_modify->arr_size = s;
 	}
-}
-
-int is_array(Entry* e) {
-	if (e->type == m_array) return 1;
-	return 0;
 }
 
 // Debug usage
