@@ -1043,7 +1043,7 @@ YY_RULE_SETUP
 case 41:
 YY_RULE_SETUP
 #line 59 "mini_l.lex"
-{yylval.string_list = yytext; curr_col += yyleng; return IDENT;}
+{yylval.string_list = strndup(yytext, yyleng); curr_col += yyleng; return IDENT;}
 	YY_BREAK
 case 42:
 YY_RULE_SETUP

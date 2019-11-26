@@ -41,8 +41,8 @@ struct Entry {
 	
 	// Attributes
 	M_TYPE type;
-	double ival;
-	char* val;
+	double i_const_val;
+	int arr_size;
 };
 
 Entry* make_entry(char* key) {
@@ -126,18 +126,30 @@ void insert(char* key) {
 /* 
  * Attribute modification functions
 */
-void modify_attr_type(char* key, M_TYPE t) {
+void set_attr_type(char* key, M_TYPE t) {
 	Entry* to_modify = fetch(key);
 	if (to_modify != 0) {
 		to_modify->type = t;
 	}
 }
 
-void modify_attr_ival(char* key, double d) {
+void set_attr_i_const_val(char* key, double d) {
 	Entry* to_modify = fetch(key);
 	if (to_modify != 0) {
-		to_modify->ival = d;
+		to_modify->i_const_val = d;
 	}
+}
+
+void set_attr_arr_size(char* key, int s) {
+	Entry* to_modify = fetch(key);
+	if (to_modify != 0) {
+		to_modify->arr_size = s;
+	}
+}
+
+int is_array(Entry* e) {
+	if (e->type == m_array) return 1;
+	return 0;
 }
 
 // Debug usage

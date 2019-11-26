@@ -102,13 +102,19 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 21 "mini_l.y" /* yacc.c:1909  */
+#line 22 "mini_l.y" /* yacc.c:1909  */
 
 	double dval;
 	char* string_list;
-	int type;	
+	/*struct {
+		int type; 
+		char* name;
+		double val;
+	} attributes;*/
 
-#line 112 "y.tab.h" /* yacc.c:1909  */
+	struct Entry* e;
+
+#line 118 "y.tab.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

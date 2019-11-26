@@ -56,7 +56,7 @@ return {curr_col += yyleng; return RETURN;}
 
 {LETTER}({LETTER}|{NUMBER}|{CHARS})*_ {printf("Error at line %d, column %d: identifier \"%s\" cannot end with an underscore\n", curr_line, curr_col, yytext); return 1;} 
 
-{LETTER}({LETTER}|{NUMBER}|{CHARS})* {yylval.string_list = yytext; curr_col += yyleng; return IDENT;}
+{LETTER}({LETTER}|{NUMBER}|{CHARS})* {yylval.string_list = strndup(yytext, yyleng); curr_col += yyleng; return IDENT;}
 
 {NUMBER}({LETTER}|{NUMBER}|{CHARS})+ {printf("Error at line %d, column %d: identifier \"%s\" must begin with a letter\n", curr_line, curr_col, yytext); return 1;}
 

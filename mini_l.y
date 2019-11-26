@@ -2,8 +2,9 @@
 	#include <stdio.h>
 	#include <stdlib.h>
 	#include "symbol_table.h"
-	
-	#define BUFFER_SIZE 25
+	#include "code_generation.h"	
+
+	#define BUFFER_SIZE 75
 
 	void yyerror(const char* msg);
 	extern int curr_line;
@@ -21,7 +22,13 @@
 %union {
 	double dval;
 	char* string_list;
-	int type;	
+	/*struct {
+		int type; 
+		char* name;
+		double val;
+	} attributes;*/
+
+	struct Entry* e;
 }
 
 %error-verbose
@@ -29,8 +36,7 @@
 %start input
 %token <dval> INTEGER
 %token <string_list> IDENT
-%type <string_list> identifier identifiers 
-%type <type> declaration_prime term terms var expression expressions relation_expr multiplicative_expr multiplicative_exprs
+%type <attributes> input
 %left ADD SUB
 %left MULT DIV MOD
 %nonassoc UMINUS
@@ -43,7 +49,7 @@ input:			  {}
 program: functions {};
 	   
 
-functions: 	function {}
+functions: 	function { }
 		 	| function functions {}			
 			;
 
@@ -54,24 +60,24 @@ declarations: 		{}
 				| declaration SEMICOLON declarations {} 
 				;
 
-declaration: identifiers COLON declaration_prime { modify_attr_type(stringify($1), $3); };
+declaration: identifiers COLON declaration_prime {};
 
-declaration_prime: TYPE_INTEGER { $$ = m_int; }
-				 | ARRAY L_SQUARE_BRACKET INTEGER R_SQUARE_BRACKET OF TYPE_INTEGER { $$ = m_array; };
+declaration_prime: TYPE_INTEGER { }
+				 | ARRAY L_SQUARE_BRACKET INTEGER R_SQUARE_BRACKET OF TYPE_INTEGER { };
 
-identifiers: identifier { insert(stringify($1)); }
-		   | identifier COMMA identifiers { insert(stringify($1)); } 
+identifiers: identifier { }
+		   | identifier COMMA identifiers { } 
 		   ;
 
-identifier: IDENT { $$ = stringify($1); };
+identifier: IDENT { };
 
 statements:		statement SEMICOLON {}
 		  		| statement SEMICOLON statements {}
 				;
 
-statement: var ASSIGN expression { if ($1 != $3) printf("TYPE ERROR line %d\n", curr_line); }
+statement: var ASSIGN expression { }
 		 | RETURN expression {}
-		 | CONTINUE {}
+		 | CONTINUE { }
 		 | IF boolexpr THEN statements else_prime ENDIF {}
 		 | WHILE boolexpr BEGINLOOP statements ENDLOOP {}
 		 | DO BEGINLOOP statements ENDLOOP WHILE boolexpr {}
@@ -95,24 +101,25 @@ comp: EQ	{}
 	| GTE	{}
 	;
 
-var: identifier { if (fetch($1)) $$ = fetch($1)->type; else printf("UNDEFINED SYMBOL line %d: %s\n", curr_line, $1); }
-   	| identifier L_SQUARE_BRACKET expression R_SQUARE_BRACKET { if(fetch($1)) $$ = fetch($1)->type; else printf("UNDEFINED SYMBOL line %d: %s\n", curr_line, $1); };
+var: identifier { }
+   | identifier L_SQUARE_BRACKET expression R_SQUARE_BRACKET { };
 
-expression:  multiplicative_expr multiplicative_exprs { $$ = $1; }
+
+expression:  multiplicative_expr multiplicative_exprs { }
 		  ;
 
 multiplicative_exprs:  {}					
-					| SUB multiplicative_expr multiplicative_exprs { $$ = $2; if ($2 != m_int) printf("TYPE ERROR line %d\n", curr_line); } 
-					| ADD multiplicative_expr multiplicative_exprs { $$ = $2; if ($2 != m_int) printf("TYPE ERROR line %d\n", curr_line); }  
+					| SUB multiplicative_expr multiplicative_exprs { } 
+					| ADD multiplicative_expr multiplicative_exprs { }  
 					;
 
-multiplicative_expr: term terms { $$ = $1; }
+multiplicative_expr: term terms { }
 					;
 
 terms:	 {} 
-	 | MULT term terms { $$ = $2; if ($2 != m_int) printf("TYPE ERROR line %d\n", curr_line); } 
-	 | DIV term terms { $$ = $2; if ($2 != m_int) printf("TYPE ERROR line %d\n", curr_line); }
-	 | MOD term terms { $$ = $2; if ($2 != m_int) printf("TYPE ERROR line %d\n", curr_line); }
+	 | MULT term terms { } 
+	 | DIV term terms { }
+	 | MOD term terms { }
 	 ;
 
 boolexpr: relation_and_expr r_a_es {}
@@ -129,7 +136,7 @@ r_es: 	{}
 	| AND relation_expr r_es {}
 	;
 
-relation_expr:  expression comp expression { if ($1 != $3) printf("TYPE ERROR line %d\n", curr_line);}
+relation_expr:  expression comp expression { }
 			 | TRUE {}
 			 | FALSE {}
 			 | L_PAREN boolexpr R_PAREN {}
@@ -139,16 +146,16 @@ relation_expr:  expression comp expression { if ($1 != $3) printf("TYPE ERROR li
 			 | NOT L_PAREN boolexpr R_PAREN {}
 			 ;
 
-term: var  { $$ = $1; }
-	| INTEGER { $$ = m_int; }
-	| L_PAREN expression R_PAREN { $$ = $2; }
-	| SUB var %prec UMINUS { $$ = $2; }
-	| SUB INTEGER %prec UMINUS { $$ = m_int; }
-	| SUB L_PAREN expression R_PAREN %prec UMINUS { $$ = $3; }
-	| identifier L_PAREN expressions R_PAREN { $$ = m_int; }
+term: var  { }
+	| INTEGER { }
+	| L_PAREN expression R_PAREN { }
+	| SUB var %prec UMINUS { }
+	| SUB INTEGER %prec UMINUS { }
+	| SUB L_PAREN expression R_PAREN %prec UMINUS { }
+	| identifier L_PAREN expressions R_PAREN {}
 	;
 
-expressions: expression { $$ = $1; }
+expressions: expression { }
 		   | expression expressions COMMA {}
 		   ;
 
