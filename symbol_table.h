@@ -9,7 +9,7 @@
 #define T_SHIFT 4
 
 // Attributes
-typedef enum {m_void, m_int, m_array} M_TYPE;
+typedef enum {m_void, m_int, m_array, m_bool} M_TYPE;
 typedef struct Entry Entry;
 Entry* Table[T_SIZE];
 
@@ -39,6 +39,10 @@ char* M_TYPE_To_String(M_TYPE t) {
 
 		case m_array:
 			return "m_array";
+			break;
+
+		case m_bool:
+			return "m_bool";
 			break;
 
 		default:
@@ -109,7 +113,7 @@ Entry* fetch(char* key) {
 	return 0;
 }
 
-void insert(char* key) {
+void insert(char* key, M_TYPE t) {
 	int curr_hash = hash(key);
 
 	// Already in the table
@@ -117,6 +121,7 @@ void insert(char* key) {
 
 	if (!Table[curr_hash]) {
 		Table[curr_hash] = make_entry(key);
+		Table[curr_hash]->type = t;
 	} else {
 		Entry* curr = Table[curr_hash];
 		if (curr) {
@@ -124,6 +129,7 @@ void insert(char* key) {
 				curr = curr->next;
 			}
 			curr->next = make_entry(key);
+			curr->next->type = t;
 		}
 	}
 }
