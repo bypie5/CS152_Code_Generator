@@ -78,7 +78,7 @@
 %token <dval> INTEGER
 %token <string_list> IDENT
 %type <string_list> identifier identifiers comp
-%type <typeNode> declaration declaration_prime var expression boolexpr term relation_expr expressions multiplicative_expr multiplicative_exprs terms
+%type <typeNode> declaration declaration_prime var expression boolexpr term relation_expr expressions multiplicative_expr statement
 %type <typeNode> declarations function vars
 %left ADD SUB
 %left MULT DIV MOD
@@ -125,7 +125,9 @@ statement: var ASSIGN expression { if (fetch($1.name)) if (!checkType($1.t, $3.t
 			sprintf(codestr, "ret %s", $2.name); emitCode(codestr);
 		 }
 		 | CONTINUE { }
-		 | IF boolexpr THEN statements else_prime ENDIF { if ($2.t != m_bool) reg_type_error("If statement does not contain a boolean expression"); }
+		 | IF boolexpr {
+		 
+		 } THEN statements else_prime ENDIF { if ($2.t != m_bool) reg_type_error("If statement does not contain a boolean expression"); }
 		 | WHILE boolexpr BEGINLOOP statements ENDLOOP {}
 		 | DO BEGINLOOP statements ENDLOOP WHILE boolexpr {}
 		 | READ vars { sprintf(codestr, ".< %s", $2.name); emitCode(codestr); }
@@ -152,37 +154,50 @@ var: identifier {
    $$.name = $1; $$.t = m_int; 
 }
    | identifier L_SQUARE_BRACKET expression R_SQUARE_BRACKET { 
-if (!checkType($3.t, m_int)) reg_type_error("Array access expression is not of type int"); 
-else { $$.name = $1; $$.t = m_int; }
+	if (!checkType($3.t, m_int)) reg_type_error("Array access expression is not of type int"); 
+	else { $$.name = $1; $$.t = m_int; }
 };
 
-
-expression:  multiplicative_expr multiplicative_exprs { if (!checkType($1.t, m_int)) reg_type_error("Expression uses non int types"); else $$.t = m_int; }
+expression: multiplicative_expr {}
+		  | expression ADD multiplicative_expr {
+			if (!(checkType($1.t, $3.t) && checkType($1.t, m_int)))
+				reg_type_error("Expression uses non int types");
+			$$.name = newtemp();
+			sprintf(codestr, ". %s", $$.name); emitCode(codestr);
+			sprintf(codestr, "+ %s, %s, %s", $$.name, $1.name, $3.name); emitCode(codestr);
+		  }
+		  | expression SUB multiplicative_expr {
+		  	if (!(checkType($1.t, $3.t) && checkType($1.t, m_int)))
+				reg_type_error("Expression uses non int types");
+			$$.name = newtemp();
+			sprintf(codestr, ". %s", $$.name); emitCode(codestr);
+			sprintf(codestr, "- %s, %s, %s", $$.name, $1.name, $3.name); emitCode(codestr);
+		  }
 		  ;
 
-multiplicative_exprs:  {}					
-					| SUB multiplicative_expr multiplicative_exprs { 
-					if (!checkType($2.t, m_int)) reg_type_error("Expression uses non int types"); else $$ = $2; 
-					$$.name = newtemp();
-					sprintf(codestr, ". %s", $$.name); emitCode(codestr);
-					sprintf(codestr, "- %s, %s, %s", $$.name, $2.name, $3.name); emitCode(codestr);
-					} 
-					| ADD multiplicative_expr multiplicative_exprs { 
-					if (!checkType($2.t, m_int)) reg_type_error("Expression uses non int types"); else $$ = $2;
-					$$.name = newtemp();
-					sprintf(codestr, ". %s", $$.name); emitCode(codestr);
-					sprintf(codestr, "+ %s, %s, %s", $$.name, $2.name, $3.name); emitCode(codestr);
-					}  
-					;
-
-multiplicative_expr: term terms { $$ = $1; }
-					;
-
-terms:	 {} 
-	 | MULT term terms { if (!checkType($2.t, m_int)) reg_type_error("Expression uses non int types"); else $$ = $2; } 
-	 | DIV term terms  { if (!checkType($2.t, m_int)) reg_type_error("Expression uses non int types"); else $$ = $2; }
-	 | MOD term terms  { if (!checkType($2.t, m_int)) reg_type_error("Expression uses non int types"); else $$ = $2; }
-	 ;
+multiplicative_expr: term {}
+				   | multiplicative_expr MULT term {
+				   		if (!(checkType($1.t, $3.t) && checkType($1.t, m_int)))
+							reg_type_error("Expression uses non int types");
+						$$.name = newtemp();
+						sprintf(codestr, ". %s", $$.name); emitCode(codestr);
+						sprintf(codestr, "* %s, %s, %s", $$.name, $1.name, $3.name); emitCode(codestr);
+				   }
+				   | multiplicative_expr DIV term {
+						if (!(checkType($1.t, $3.t) && checkType($1.t, m_int)))
+							reg_type_error("Expression uses non int types");
+						$$.name = newtemp();
+						sprintf(codestr, ". %s", $$.name); emitCode(codestr);
+						sprintf(codestr, "/ %s, %s, %s", $$.name, $1.name, $3.name); emitCode(codestr);
+				   }
+				   | multiplicative_expr MOD term {
+						if (!(checkType($1.t, $3.t) && checkType($1.t, m_int)))
+							reg_type_error("Expression uses non int types");
+						$$.name = newtemp();
+						sprintf(codestr, ". %s", $$.name); emitCode(codestr);
+						sprintf(codestr, "% %s, %s, %s", $$.name, $1.name, $3.name); emitCode(codestr);
+				   }
+				   ;
 
 boolexpr: relation_and_expr r_a_es {}
 		;
@@ -198,7 +213,10 @@ r_es: 	{}
 	| AND relation_expr r_es {}
 	;
 
-relation_expr:  expression comp expression { if (!(checkType($1.t, $3.t) && checkType($1.t, m_int))) reg_type_error("Comparison does not compare two int expressions"); else $$.t = m_bool; 
+relation_expr:  expression comp expression { 
+	if (!(checkType($1.t, $3.t) && checkType($1.t, m_int))) 
+		reg_type_error("Comparison does not compare two int expressions"); 
+	else $$.t = m_bool; 
 	char* temp_c = newtemp();
 	sprintf(codestr, ". %s", temp_c); emitCode(codestr);
 	sprintf(codestr, "%s %s, %s, %s", $2, temp_c, $1.name, $3.name); emitCode(codestr);
@@ -208,7 +226,8 @@ relation_expr:  expression comp expression { if (!(checkType($1.t, $3.t) && chec
 			 | TRUE { $$.t = m_bool; }
 			 | FALSE { $$.t = m_bool; }
 			 | L_PAREN boolexpr R_PAREN { $$.t = m_bool; }
-			 | NOT expression comp expression { if (!(checkType($2.t, $4.t) && checkType($2.t, m_int))) reg_type_error("Comparison does not compare two int expressions"); else $$.t = m_bool;}
+			 | NOT expression comp expression { 
+	if (!(checkType($2.t, $4.t) && checkType($2.t, m_int))) reg_type_error("Comparison does not compare two int expressions"); else $$.t = m_bool;}
 			 | NOT TRUE { $$.t = m_bool; }
 			 | NOT FALSE { $$.t = m_bool; }
 			 | NOT L_PAREN boolexpr R_PAREN { $$.t = m_bool; }
@@ -226,13 +245,30 @@ term: var  {
 	sprintf(codestr, ". %s", $$.name); emitCode(codestr); 
 	sprintf(codestr, "= %s, %d", $$.name, (int)$1); emitCode(codestr);
 	}
-	| L_PAREN expression R_PAREN { if (!checkType($2.t, m_int)) reg_type_error("Expression is not an int type"); else $$ = $2; }
-	| SUB var %prec UMINUS { $$ = $2; $$.name = "subtest2";}
-	| SUB INTEGER %prec UMINUS { $$.t = m_int; $$.name = "a"; }
-	| SUB L_PAREN expression R_PAREN %prec UMINUS { if (!checkType($3.t, m_int)) reg_type_error("Expression is not an int type"); else $$.t = m_int; $$.name = "subtest";}
+	| L_PAREN expression R_PAREN { 
+	if (!checkType($2.t, m_int)) 
+		reg_type_error("Expression is not an int type"); 
+	else 
+		$$ = $2; 
+	}
+	| SUB var %prec UMINUS { 
+	$$ = $2; $$.name = "subtest2";
+	}
+	| SUB INTEGER %prec UMINUS { 
+	$$.t = m_int; $$.name = "a"; 
+	}
+	| SUB L_PAREN expression R_PAREN %prec UMINUS { 
+	if (!checkType($3.t, m_int)) 
+		reg_type_error("Expression is not an int type"); 
+	else 
+		$$.t = m_int; 
+	$$.name = "subtest";
+	}
 	| identifier L_PAREN expressions R_PAREN { 
 		$$.t = m_int;
 		$$.name = newtemp();	
+		sprintf(codestr, "param %s", $3.name); emitCode(codestr);
+		/*NOTE WILL PROBABLY NEED TO IMPLEMENT SPLIT EMIT FOR PARAMS*/
 		sprintf(codestr, ". %s", $$.name); emitCode(codestr);
 		sprintf(codestr, "call %s, %s", $1, $$.name); emitCode(codestr);
 	}
