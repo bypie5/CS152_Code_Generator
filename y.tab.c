@@ -1552,8 +1552,8 @@ yyreduce:
   case 22:
 #line 128 "mini_l.y" /* yacc.c:1646  */
     {
-			char*temp = newlabel();
-			sprintf(codestr, "?:= %s, %s", temp, (yyvsp[0].typeNode).name); emitCode(codestr);
+			char* label = newlabel();
+			sprintf(codestr, "?:= %s, %s", label, (yyvsp[0].typeNode).name);	emitCode(codestr);
 		 }
 #line 1559 "y.tab.c" /* yacc.c:1646  */
     break;
@@ -1739,7 +1739,7 @@ yyreduce:
 
   case 47:
 #line 203 "mini_l.y" /* yacc.c:1646  */
-    {}
+    { (yyval.typeNode) = (yyvsp[-1].typeNode); printf("boolexpr.name %s\n", (yyvsp[-1].typeNode).name); (yyval.typeNode).name = "what"; }
 #line 1744 "y.tab.c" /* yacc.c:1646  */
     break;
 
@@ -1757,7 +1757,7 @@ yyreduce:
 
   case 50:
 #line 210 "mini_l.y" /* yacc.c:1646  */
-    {}
+    { (yyval.typeNode) = (yyvsp[-1].typeNode); }
 #line 1762 "y.tab.c" /* yacc.c:1646  */
     break;
 

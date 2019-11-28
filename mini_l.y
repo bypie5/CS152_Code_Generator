@@ -79,7 +79,7 @@
 %token <string_list> IDENT
 %type <string_list> identifier identifiers comp
 %type <typeNode> declaration declaration_prime var expression boolexpr term relation_expr expressions multiplicative_expr statement
-%type <typeNode> declarations function vars
+%type <typeNode> declarations function vars relation_and_expr
 %left ADD SUB
 %left MULT DIV MOD
 %nonassoc UMINUS
@@ -126,7 +126,8 @@ statement: var ASSIGN expression { if (fetch($1.name)) if (!checkType($1.t, $3.t
 		 }
 		 | CONTINUE { }
 		 | IF boolexpr {
-		 
+			char* label = newlabel();
+			sprintf(codestr, "?:= %s, %s", label, $2.name);	emitCode(codestr);
 		 } THEN statements else_prime ENDIF { if ($2.t != m_bool) reg_type_error("If statement does not contain a boolean expression"); }
 		 | WHILE boolexpr BEGINLOOP statements ENDLOOP {}
 		 | DO BEGINLOOP statements ENDLOOP WHILE boolexpr {}
@@ -199,14 +200,14 @@ multiplicative_expr: term {}
 				   }
 				   ;
 
-boolexpr: relation_and_expr r_a_es {}
+boolexpr: relation_and_expr r_a_es { $$ = $1; printf("boolexpr.name %s\n", $1.name); $$.name = "what"; }
 		;
 
 r_a_es: 	{}
 	  |  OR relation_and_expr r_a_es {}
 	  ;
 
-relation_and_expr: relation_expr r_es {} 
+relation_and_expr: relation_expr r_es { $$ = $1; }  
 				 ;
 
 r_es: 	{}
