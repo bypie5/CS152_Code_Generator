@@ -102,18 +102,19 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 60 "mini_l.y" /* yacc.c:1909  */
+#line 63 "mini_l.y" /* yacc.c:1909  */
 
 	double dval;
 	char* string_list;
 
 	struct typeNode {
-		char* name;
+		char* name; // Useful for code generation
+		char* code;
 		int t;
 		int size;
 	} typeNode;	
 
-#line 117 "y.tab.h" /* yacc.c:1909  */
+#line 118 "y.tab.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

@@ -18,8 +18,6 @@ char* newtemp() {
 	sprintf(buff, "__temp__%d", tempCount);
 	tempCount++;
 
-	printf(". %s\n", buff);
-
 	return buff;
 }
 
@@ -28,8 +26,6 @@ char* newlabel() {
 	char* buff = malloc(sizeof(char)*15);
 	sprintf(buff, "__label__%d", labelCount);
 	labelCount++;
-
-	printf(": %s\n", buff);
 
 	return buff;
 }
