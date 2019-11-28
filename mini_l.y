@@ -78,8 +78,8 @@
 %token <dval> INTEGER
 %token <string_list> IDENT
 %type <string_list> identifier identifiers comp
-%type <typeNode> declaration declaration_prime var expression boolexpr term relation_expr expressions multiplicative_expr statement
-%type <typeNode> declarations function vars relation_and_expr
+%type <typeNode> declaration declaration_prime var expression boolexpr term relation_expr expressions multiplicative_expr 
+%type <typeNode> declarations function vars relation_and_expr statement statements
 %left ADD SUB
 %left MULT DIV MOD
 %nonassoc UMINUS
@@ -118,15 +118,18 @@ statements:		statement SEMICOLON {}
 		  		| statement SEMICOLON statements {}
 				;
 
-statement: var ASSIGN expression { if (fetch($1.name)) if (!checkType($1.t, $3.t)) reg_type_error("Mismatched assignment"); 
-		 						 	sprintf(codestr, "= %s, %s", $1.name, $3.name); emitCode(codestr);
-								 }
-		 | RETURN expression { if (!checkType($2.t, m_int)) reg_type_error("Trying to return a non int type");
+statement: var ASSIGN expression { 
+		 	if (fetch($1.name)) if (!checkType($1.t, $3.t)) reg_type_error("Mismatched assignment"); 
+			sprintf(codestr, "= %s, %s", $1.name, $3.name); emitCode(codestr);
+		 }
+		 | RETURN expression { 
+			if (!checkType($2.t, m_int)) reg_type_error("Trying to return a non int type");
 			sprintf(codestr, "ret %s", $2.name); emitCode(codestr);
 		 }
 		 | CONTINUE { }
 		 | IF boolexpr {
 			char* label = newlabel();
+			$$.name = label;
 			sprintf(codestr, "?:= %s, %s", label, $2.name);	emitCode(codestr);
 		 } THEN statements else_prime ENDIF { if ($2.t != m_bool) reg_type_error("If statement does not contain a boolean expression"); }
 		 | WHILE boolexpr BEGINLOOP statements ENDLOOP {}
@@ -200,7 +203,7 @@ multiplicative_expr: term {}
 				   }
 				   ;
 
-boolexpr: relation_and_expr r_a_es { $$ = $1; printf("boolexpr.name %s\n", $1.name); $$.name = "what"; }
+boolexpr: relation_and_expr r_a_es { $$ = $1; }
 		;
 
 r_a_es: 	{}
@@ -226,7 +229,7 @@ relation_expr:  expression comp expression {
 	} 
 			 | TRUE { $$.t = m_bool; }
 			 | FALSE { $$.t = m_bool; }
-			 | L_PAREN boolexpr R_PAREN { $$.t = m_bool; }
+			 | L_PAREN boolexpr R_PAREN { $$.t = m_bool; $$.name = $2.name; }
 			 | NOT expression comp expression { 
 	if (!(checkType($2.t, $4.t) && checkType($2.t, m_int))) reg_type_error("Comparison does not compare two int expressions"); else $$.t = m_bool;}
 			 | NOT TRUE { $$.t = m_bool; }
