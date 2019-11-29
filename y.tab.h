@@ -102,7 +102,7 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 63 "mini_l.y" /* yacc.c:1909  */
+#line 75 "mini_l.y" /* yacc.c:1909  */
 
 	double dval;
 	char* string_list;
@@ -112,9 +112,15 @@ union YYSTYPE
 		char* code;
 		int t;
 		int size;
-	} typeNode;	
+		char* index;
+	} typeNode;
 
-#line 118 "y.tab.h" /* yacc.c:1909  */
+	struct elseif {
+		char* then_label;
+		char* else_label;
+	} elseif;
+
+#line 124 "y.tab.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

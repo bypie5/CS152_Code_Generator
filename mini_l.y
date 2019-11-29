@@ -30,7 +30,6 @@
 			insert(pch, type);
 			pch = strtok(NULL, ",");
 		}
-
 	}
 
 	void split_emit(char* list, M_TYPE type, int size) {
@@ -49,9 +48,22 @@
 		}
 	}
 
+	void split_param(char* list) {
+		int param_count = 0;
+		char* ref = malloc(strlen(list) + 1);
+		strcpy(ref, list);
+		char* pch = strtok(ref, ",");
+		while(pch != NULL) {
+			sprintf(codestr, "= %s, $%d", pch, param_count);
+			emitCode(codestr);
+			pch = strtok(NULL, ",");
+			param_count++;
+		}
+	}	
+
 	void reg_type_error(char* msg) {
 		errorCount++;
-		printf("TYPE ERROR (line %d): %s\n", curr_line, msg);
+		//printf("TYPE ERROR (line %d): %s\n", curr_line, msg);
 	}
 
 	int checkType(M_TYPE t1, M_TYPE t2) {
@@ -69,7 +81,13 @@
 		char* code;
 		int t;
 		int size;
-	} typeNode;	
+		char* index;
+	} typeNode;
+
+	struct elseif {
+		char* then_label;
+		char* else_label;
+	} elseif;
 }
 
 %error-verbose
@@ -77,9 +95,9 @@
 %start input
 %token <dval> INTEGER
 %token <string_list> IDENT
-%type <string_list> identifier identifiers comp
-%type <typeNode> declaration declaration_prime var expression boolexpr term relation_expr expressions multiplicative_expr 
-%type <typeNode> declarations function vars relation_and_expr statement statements
+%type <string_list> identifier identifiers comp 
+%type <typeNode> var expression boolexpr term relation_expr expressions multiplicative_expr declaration declarations declaration_prime
+%type <typeNode> function vars relation_and_expr statement statements
 %left ADD SUB
 %left MULT DIV MOD
 %nonassoc UMINUS
@@ -96,14 +114,29 @@ functions: 	function { }
 		 	| function functions {}			
 			;
 
-function: FUNCTION IDENT { sprintf(codestr, "func %s", $2); emitCode(codestr); insert($2, m_void); } SEMICOLON BEGIN_PARAMS declarations END_PARAMS BEGIN_LOCALS declarations END_LOCALS BEGIN_BODY statements END_BODY { sprintf(codestr, "endfunc\n"); emitCode(codestr); }
+function: FUNCTION IDENT { 
+		sprintf(codestr, "func %s", $2); 
+		emitCode(codestr); 
+		insert($2, m_void); 
+		} SEMICOLON BEGIN_PARAMS declarations {
+		if ($6.code) {
+			split_param($6.code);
+		}
+		} END_PARAMS BEGIN_LOCALS declarations END_LOCALS BEGIN_BODY statements END_BODY { 
+		sprintf(codestr, "endfunc\n"); 
+		emitCode(codestr); 
+		}
 		;
 
-declarations: 		{}
-				| declaration SEMICOLON declarations {} 
+declarations: {$$.code = 0;}
+				| declaration SEMICOLON declarations {$$ = $1;} 
 				;
 
-declaration: identifiers COLON declaration_prime { split_insert($1, $3.t); split_emit($1, $3.t, $3.size); };
+declaration: identifiers COLON declaration_prime { 
+		   	$$.code = $1;
+			split_insert($1, $3.t); 
+			split_emit($1, $3.t, $3.size); 
+		  };
 
 declaration_prime: TYPE_INTEGER { $$.t = m_int; }
 				 | ARRAY L_SQUARE_BRACKET INTEGER R_SQUARE_BRACKET OF TYPE_INTEGER { $$.t = m_array; $$.size = (int) $3; };
@@ -119,21 +152,43 @@ statements:		statement SEMICOLON {}
 				;
 
 statement: var ASSIGN expression { 
-		 	if (fetch($1.name)) if (!checkType($1.t, $3.t)) reg_type_error("Mismatched assignment"); 
-			sprintf(codestr, "= %s, %s", $1.name, $3.name); emitCode(codestr);
+		 	if (fetch($1.name)) 
+				if (!checkType($1.t, $3.t) || !checkType($3.t, m_array) || !checkType($1.t, m_array)) 
+					reg_type_error("Mismatched assignment"); 
+			if (checkType($1.t, m_int) && checkType($3.t, m_int)) {
+				sprintf(codestr, "= %s, %s", $1.name, $3.name); emitCode(codestr);
+			}
+		 	else if (checkType($1.t, m_array)) {
+				sprintf(codestr, "[]= %s, %s, %s", $1.name, $1.index, $3.name) ; emitCode(codestr);
+			}
+			else if (checkType($3.t, m_array)) {
+				sprintf(codestr, "=[] %s, %s, %s", $1.name, $3.name, $3.index); emitCode(codestr);
+			} else {
+			}
 		 }
 		 | RETURN expression { 
 			if (!checkType($2.t, m_int)) reg_type_error("Trying to return a non int type");
 			sprintf(codestr, "ret %s", $2.name); emitCode(codestr);
 		 }
 		 | CONTINUE { }
-		 | IF boolexpr {
-			char* label = newlabel();
-			$$.name = label;
-			sprintf(codestr, "?:= %s, %s", label, $2.name);	emitCode(codestr);
-		 } THEN statements else_prime ENDIF { if ($2.t != m_bool) reg_type_error("If statement does not contain a boolean expression"); }
-		 | WHILE boolexpr BEGINLOOP statements ENDLOOP {}
-		 | DO BEGINLOOP statements ENDLOOP WHILE boolexpr {}
+		 | IF boolexpr 
+		 {
+			char* else_label = newlabel();
+			$<elseif>$.else_label = else_label;
+			sprintf(codestr, "?:= %s, %s", else_label, $2.name); emitCode(codestr);
+		 	char* then_label = newlabel();
+			$<elseif>$.then_label = then_label;
+			sprintf(codestr, ":= %s", then_label); emitCode(codestr);
+		 } 
+		 THEN {
+			sprintf(codestr, ": %s", $<elseif>3.else_label); emitCode(codestr);
+		 } statements {
+		 	sprintf(codestr, ": %s", $<elseif>3.then_label); emitCode(codestr);
+		 } else_prime ENDIF { if ($2.t != m_bool) reg_type_error("If statement does not contain a boolean expression"); }
+		 | WHILE boolexpr BEGINLOOP statements ENDLOOP {
+		 }
+		 | DO BEGINLOOP statements ENDLOOP WHILE boolexpr {
+		 }
 		 | READ vars { sprintf(codestr, ".< %s", $2.name); emitCode(codestr); }
 		 | WRITE vars { sprintf(codestr, ".> %s", $2.name); emitCode(codestr); }
 		 ;
@@ -159,7 +214,7 @@ var: identifier {
 }
    | identifier L_SQUARE_BRACKET expression R_SQUARE_BRACKET { 
 	if (!checkType($3.t, m_int)) reg_type_error("Array access expression is not of type int"); 
-	else { $$.name = $1; $$.t = m_int; }
+	else { $$.name = $1; $$.t = m_array; $$.index = $3.name; }
 };
 
 expression: multiplicative_expr {}
@@ -298,7 +353,7 @@ int main(int argc, char** argv) {
 	}
 	yyparse();
 	if (errorCount > 0) {
-		printf("WARNING: %d error(s) in the above contexts.", errorCount);
+		//printf("WARNING: %d error(s) in the above contexts.\n", errorCount);
 	}
 	return 0;
 }
