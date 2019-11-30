@@ -103,7 +103,7 @@
 %token <string_list> IDENT
 %type <string_list> identifier identifiers comp 
 %type <typeNode> var expression boolexpr term relation_expr expressions multiplicative_expr declaration declarations declaration_prime
-%type <typeNode> function vars relation_and_expr //statement statements
+%type <typeNode> function vars relation_and_expr 
 %left ADD SUB
 %left MULT DIV MOD
 %nonassoc UMINUS
@@ -145,7 +145,10 @@ declaration: identifiers COLON declaration_prime {
 		  };
 
 declaration_prime: TYPE_INTEGER { $$.t = m_int; }
-				 | ARRAY L_SQUARE_BRACKET INTEGER R_SQUARE_BRACKET OF TYPE_INTEGER { $$.t = m_array; $$.size = (int) $3; };
+				 | ARRAY L_SQUARE_BRACKET INTEGER R_SQUARE_BRACKET OF TYPE_INTEGER { 
+					$$.t = m_array; $$.size = (int) $3;
+ 				 	if ($$.size <= 0) reg_type_error("Invalid array size");
+				 };
 
 identifiers: identifier { $$ = $1; }
 		   | identifier COMMA identifiers { $$ = concat($$, concat(",", $3)); } 
@@ -215,17 +218,11 @@ statement: var ASSIGN expression {
 		 	sprintf(codestr, ": %s", $<whileloop>1.exit_label); emitCode(codestr);
 		 }
 		 | {
-		 	//$<whileloop>$.start_label = newlabel();
-			$<whileloop>$.begin_label = newlabel();
-			//$<whileloop>$.exit_label = newlabel();
-			//sprintf(codestr, ": %s", $<whileloop>$.start_label); emitCode(codestr);
-	 	 }
-			DO BEGINLOOP {
+		 	$<whileloop>$.begin_label = newlabel();
+		 } DO BEGINLOOP {
 			sprintf(codestr, ": %s", $<whileloop>1.begin_label); emitCode(codestr);
-		 } statements {
-		 	//sprintf(codestr, ":= %s", $<whileloop>1.start_label); emitCode(codestr);
-		 } ENDLOOP WHILE boolexpr {
-			sprintf(codestr, "?:= %s, %s", $<whileloop>1.begin_label, $9.name); emitCode(codestr);
+		 } statements ENDLOOP WHILE boolexpr {
+			sprintf(codestr, "?:= %s, %s", $<whileloop>1.begin_label, $8.name); emitCode(codestr);
 		 }
 		 | READ vars { 
 			if ($2.t == m_int) {
@@ -415,8 +412,11 @@ term: var  {
 	if (!checkType($3.t, m_int)) 
 		reg_type_error("Expression is not an int type"); 
 	$$.t = m_int; 
-	//$$.name = "subtest";
-	}
+	
+	$$.name = newtemp();
+	sprintf(codestr, ". %s", $$.name); emitCode(codestr);
+	sprintf(codestr, "* %s, %s, -1", $$.name, $3.name); emitCode(codestr);
+    }
 	| identifier L_PAREN expressions R_PAREN { 
 		$$.t = m_int;
 		$$.name = newtemp();	
