@@ -88,6 +88,12 @@
 		char* then_label;
 		char* else_label;
 	} elseif;
+
+	struct whileloop {
+		char* begin_label;
+		char* exit_label;
+		char* start_label;
+	} whileloop;
 }
 
 %error-verbose
@@ -161,11 +167,10 @@ statement: var ASSIGN expression {
 		 	else if (checkType($1.t, m_array)) {
 				sprintf(codestr, "[]= %s, %s, %s", $1.name, $1.index, $3.name) ; emitCode(codestr);
 			}
-			else if (checkType($3.t, m_array)) {
+			else {
 				sprintf(codestr, "=[] %s, %s, %s", $1.name, $3.name, $3.index); emitCode(codestr);
-			} else {
-			}
-		 }
+			}		 
+         }
 		 | RETURN expression { 
 			if (!checkType($2.t, m_int)) reg_type_error("Trying to return a non int type");
 			sprintf(codestr, "ret %s", $2.name); emitCode(codestr);
@@ -184,8 +189,25 @@ statement: var ASSIGN expression {
 			sprintf(codestr, ": %s", $<elseif>3.else_label); emitCode(codestr);
 		 } statements {
 		 	sprintf(codestr, ": %s", $<elseif>3.then_label); emitCode(codestr);
-		 } else_prime ENDIF { if ($2.t != m_bool) reg_type_error("If statement does not contain a boolean expression"); }
-		 | WHILE boolexpr BEGINLOOP statements ENDLOOP {
+		 } else_prime ENDIF { 
+			if ($2.t != m_bool) 
+				reg_type_error("If statement does not contain a boolean expression"); 
+		 }
+		 | {
+			$<whileloop>$.start_label = newlabel(); 
+			sprintf(codestr, ": %s", $<whileloop>$.start_label); emitCode(codestr);
+		 } WHILE boolexpr
+		 { 
+			$<whileloop>1.begin_label = newlabel();
+			sprintf(codestr, "?:= %s, %s", $<whileloop>1.begin_label, $3.name); emitCode(codestr);
+			$<whileloop>1.exit_label = newlabel();
+			sprintf(codestr, ":= %s", $<whileloop>1.exit_label); emitCode(codestr);
+		 } BEGINLOOP {
+			sprintf(codestr, ": %s", $<whileloop>1.begin_label); emitCode(codestr);
+		 } statements {
+		 	sprintf(codestr, ":= %s", $<whileloop>1.start_label); emitCode(codestr);
+		 } ENDLOOP {
+		 	sprintf(codestr, ": %s", $<whileloop>1.exit_label); emitCode(codestr);
 		 }
 		 | DO BEGINLOOP statements ENDLOOP WHILE boolexpr {
 		 }
@@ -214,7 +236,7 @@ var: identifier {
 }
    | identifier L_SQUARE_BRACKET expression R_SQUARE_BRACKET { 
 	if (!checkType($3.t, m_int)) reg_type_error("Array access expression is not of type int"); 
-	else { $$.name = $1; $$.t = m_array; $$.index = $3.name; }
+	$$.name = $1; $$.t = m_array; $$.index = $3.name;
 };
 
 expression: multiplicative_expr {}
@@ -258,45 +280,70 @@ multiplicative_expr: term {}
 				   }
 				   ;
 
-boolexpr: relation_and_expr r_a_es { $$ = $1; }
+boolexpr: relation_and_expr { $$ = $1; }
+		| boolexpr OR relation_and_expr {
+			$$.name = newtemp();
+			sprintf(codestr, ". %s", $$.name); emitCode(codestr);
+			sprintf(codestr, "|| %s, %s, %s", $$.name, $1.name, $3.name); emitCode(codestr);
+		}
 		;
 
-r_a_es: 	{}
-	  |  OR relation_and_expr r_a_es {}
-	  ;
-
-relation_and_expr: relation_expr r_es { $$ = $1; }  
+relation_and_expr: relation_expr { $$ = $1; }  
+				 | relation_and_expr AND relation_expr {
+					$$.name = newtemp();
+				 	sprintf(codestr, ". %s", $$.name); emitCode(codestr);
+				 	sprintf(codestr, "&& %s, %s, %s", $$.name, $1.name, $3.name); emitCode(codestr);
+	 		     }
 				 ;
-
-r_es: 	{}
-	| AND relation_expr r_es {}
-	;
 
 relation_expr:  expression comp expression { 
 	if (!(checkType($1.t, $3.t) && checkType($1.t, m_int))) 
 		reg_type_error("Comparison does not compare two int expressions"); 
-	else $$.t = m_bool; 
+	$$.t = m_bool; 
 	char* temp_c = newtemp();
 	sprintf(codestr, ". %s", temp_c); emitCode(codestr);
 	sprintf(codestr, "%s %s, %s, %s", $2, temp_c, $1.name, $3.name); emitCode(codestr);
 	
 	$$.name = temp_c;
 	} 
-			 | TRUE { $$.t = m_bool; }
-			 | FALSE { $$.t = m_bool; }
-			 | L_PAREN boolexpr R_PAREN { $$.t = m_bool; $$.name = $2.name; }
+			 | TRUE { 
+	$$.t = m_bool; 
+	}
+			 | FALSE {
+	$$.t = m_bool; 
+	}
+			 | L_PAREN boolexpr R_PAREN { 
+	$$.t = m_bool; 
+	$$.name = $2.name; 
+	}
 			 | NOT expression comp expression { 
-	if (!(checkType($2.t, $4.t) && checkType($2.t, m_int))) reg_type_error("Comparison does not compare two int expressions"); else $$.t = m_bool;}
-			 | NOT TRUE { $$.t = m_bool; }
-			 | NOT FALSE { $$.t = m_bool; }
-			 | NOT L_PAREN boolexpr R_PAREN { $$.t = m_bool; }
+	if (!(checkType($2.t, $4.t) && checkType($2.t, m_int))) 
+		reg_type_error("Comparison does not compare two int expressions"); 
+	$$.t = m_bool;
+	}
+			 | NOT TRUE { 
+	$$.t = m_bool; 
+	}
+			 | NOT FALSE { 
+	$$.t = m_bool; 
+	}
+			 | NOT L_PAREN boolexpr R_PAREN { 
+	$$.t = m_bool; 
+	}
 			 ;
 
 term: var  { 
 	if (fetch($1.name)) $$ = $1; 
-	$$.name = newtemp(); 
-	sprintf(codestr, ". %s", $$.name); emitCode(codestr); 
-	sprintf(codestr, "= %s, %s", $$.name, $1.name); emitCode(codestr);
+	if ($1.t == m_int) {
+		$$.name = newtemp(); 
+		sprintf(codestr, ". %s", $$.name); emitCode(codestr); 
+		sprintf(codestr, "= %s, %s", $$.name, $1.name); emitCode(codestr);
+	} else {
+		$$.name = newtemp();
+		sprintf(codestr, ". %s", $$.name); emitCode(codestr);
+		sprintf(codestr, "=[] %s, %s, %s", $$.name, $1.name, $1.index); emitCode(codestr);	
+		$$.t = m_array;
+	}
 	}
 	| INTEGER { 
 	$$.t = m_int; 
@@ -307,20 +354,18 @@ term: var  {
 	| L_PAREN expression R_PAREN { 
 	if (!checkType($2.t, m_int)) 
 		reg_type_error("Expression is not an int type"); 
-	else 
-		$$ = $2; 
+	$$ = $2; 
 	}
 	| SUB var %prec UMINUS { 
-	$$ = $2; $$.name = "subtest2";
+	$$ = $2; //$$.name = "subtest2";
 	}
 	| SUB INTEGER %prec UMINUS { 
-	$$.t = m_int; $$.name = "a"; 
+	$$.t = m_int; //$$.name = "a"; 
 	}
 	| SUB L_PAREN expression R_PAREN %prec UMINUS { 
 	if (!checkType($3.t, m_int)) 
 		reg_type_error("Expression is not an int type"); 
-	else 
-		$$.t = m_int; 
+	$$.t = m_int; 
 	$$.name = "subtest";
 	}
 	| identifier L_PAREN expressions R_PAREN { 
@@ -334,9 +379,6 @@ term: var  {
 	;
 
 expressions: expression { 
-		   /*$$.name = newtemp(); 
-		   sprintf(codestr, ". %s", $$.name); emitCode(codestr);
-		   sprintf(codestr, "= %s, %s", $$.name, $1.name); emitCode(codestr);*/
 		   }
 		   | expression expressions COMMA {}
 		   ;

@@ -120,7 +120,13 @@ union YYSTYPE
 		char* else_label;
 	} elseif;
 
-#line 124 "y.tab.h" /* yacc.c:1909  */
+	struct whileloop {
+		char* begin_label;
+		char* exit_label;
+		char* start_label;
+	} whileloop;
+
+#line 130 "y.tab.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;
