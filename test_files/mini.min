@@ -3,7 +3,11 @@ beginparams
 endparams
 beginlocals
 a : integer;
+b : integer;
+
 endlocals
 beginbody
-a := -1 + 2 * 3;
+#b := -1;
+a := b + 2 * 3;
+write a;
 endbody

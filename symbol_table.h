@@ -95,10 +95,8 @@ int lookup(char* key) {
 
 Entry* fetch(char* key) {
 	// Key is not found in the symbol table
-	if (!lookup(key)) {
-		printf("Key: \'%s\' is not in symbol table\n", key);
+	if (!lookup(key))
 		return 0;
-	}
 
 	int target_hash = hash(key);
 	// Traverse the hash list
@@ -113,11 +111,11 @@ Entry* fetch(char* key) {
 	return 0;
 }
 
-void insert(char* key, M_TYPE t) {
+int insert(char* key, M_TYPE t) {
 	int curr_hash = hash(key);
 
 	// Already in the table
-	if (lookup(key)) return;
+	if (lookup(key)) return 0;
 
 	if (!Table[curr_hash]) {
 		Table[curr_hash] = make_entry(key);
@@ -132,6 +130,8 @@ void insert(char* key, M_TYPE t) {
 			curr->next->type = t;
 		}
 	}
+
+	return 1;
 }
 
 /* 

@@ -5,11 +5,23 @@
 #include "stdio.h"
 
 #define MAX_LINE_LEN 254
+#define MAX_LINE_COUNT 2048
+
+int lines = 0;
+char source[MAX_LINE_COUNT][MAX_LINE_LEN];
 
 char codestr[MAX_LINE_LEN];
 
 void emitCode(char* code) {
-	printf("%s\n", code);
+	sprintf(source[lines], "%s", code);
+	lines++;
+}
+
+void printCode() {
+	int i;
+	for (i = 0; i < lines; i++) {
+		printf("%s\n", source[i]);
+	}
 }
 
 int tempCount = 0;

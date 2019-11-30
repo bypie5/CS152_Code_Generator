@@ -21,13 +21,18 @@
 		return result;
 	}
 
+	void reg_type_error(char* msg) {
+		errorCount++;
+		printf("TYPE ERROR (line %d): %s\n", curr_line, msg);
+	}
+
 	// Handles declarations that were split by commas
 	void split_insert(const char* list, M_TYPE type) {
 		char* ref = malloc(strlen(list) + 1);
 		strcpy(ref, list);
 		char* pch = strtok(ref, ",");
 		while(pch != NULL) {
-			insert(pch, type);
+			if(!insert(pch, type)) reg_type_error("Variable multiply defined");
 			pch = strtok(NULL, ",");
 		}
 	}
@@ -60,11 +65,6 @@
 			param_count++;
 		}
 	}	
-
-	void reg_type_error(char* msg) {
-		errorCount++;
-		//printf("TYPE ERROR (line %d): %s\n", curr_line, msg);
-	}
 
 	int checkType(M_TYPE t1, M_TYPE t2) {
 		if (t1 == t2) return 1;
@@ -103,7 +103,7 @@
 %token <string_list> IDENT
 %type <string_list> identifier identifiers comp 
 %type <typeNode> var expression boolexpr term relation_expr expressions multiplicative_expr declaration declarations declaration_prime
-%type <typeNode> function vars relation_and_expr statement statements
+%type <typeNode> function vars relation_and_expr //statement statements
 %left ADD SUB
 %left MULT DIV MOD
 %nonassoc UMINUS
@@ -123,7 +123,7 @@ functions: 	function { }
 function: FUNCTION IDENT { 
 		sprintf(codestr, "func %s", $2); 
 		emitCode(codestr); 
-		insert($2, m_void); 
+		if (!insert($2, m_void)) {reg_type_error("Variable multiply defined");} 
 		} SEMICOLON BEGIN_PARAMS declarations {
 		if ($6.code) {
 			split_param($6.code);
@@ -158,9 +158,12 @@ statements:		statement SEMICOLON {}
 				;
 
 statement: var ASSIGN expression { 
-		 	if (fetch($1.name)) 
-				if (!checkType($1.t, $3.t) || !checkType($3.t, m_array) || !checkType($1.t, m_array)) 
+		 	if (fetch($1.name)) {
+				if (!( (checkType($1.t, m_int) && checkType($1.t, m_int)) || (checkType($1.t, m_array) && checkType($3.t, m_int)) )) 
 					reg_type_error("Mismatched assignment"); 
+			} else {
+				reg_type_error("Symbol does not exist in the symbol table");
+			}
 			if (checkType($1.t, m_int) && checkType($3.t, m_int)) {
 				sprintf(codestr, "= %s, %s", $1.name, $3.name); emitCode(codestr);
 			}
@@ -175,7 +178,9 @@ statement: var ASSIGN expression {
 			if (!checkType($2.t, m_int)) reg_type_error("Trying to return a non int type");
 			sprintf(codestr, "ret %s", $2.name); emitCode(codestr);
 		 }
-		 | CONTINUE { }
+		 | CONTINUE { 
+		 	
+		 }
 		 | IF boolexpr 
 		 {
 			char* else_label = newlabel();
@@ -209,10 +214,33 @@ statement: var ASSIGN expression {
 		 } ENDLOOP {
 		 	sprintf(codestr, ": %s", $<whileloop>1.exit_label); emitCode(codestr);
 		 }
-		 | DO BEGINLOOP statements ENDLOOP WHILE boolexpr {
+		 | {
+		 	//$<whileloop>$.start_label = newlabel();
+			$<whileloop>$.begin_label = newlabel();
+			//$<whileloop>$.exit_label = newlabel();
+			//sprintf(codestr, ": %s", $<whileloop>$.start_label); emitCode(codestr);
+	 	 }
+			DO BEGINLOOP {
+			sprintf(codestr, ": %s", $<whileloop>1.begin_label); emitCode(codestr);
+		 } statements {
+		 	//sprintf(codestr, ":= %s", $<whileloop>1.start_label); emitCode(codestr);
+		 } ENDLOOP WHILE boolexpr {
+			sprintf(codestr, "?:= %s, %s", $<whileloop>1.begin_label, $9.name); emitCode(codestr);
 		 }
-		 | READ vars { sprintf(codestr, ".< %s", $2.name); emitCode(codestr); }
-		 | WRITE vars { sprintf(codestr, ".> %s", $2.name); emitCode(codestr); }
+		 | READ vars { 
+			if ($2.t == m_int) {
+				sprintf(codestr, ".< %s", $2.name); emitCode(codestr); 
+		 	} else {
+				sprintf(codestr, ".[]< %s, %s", $2.name, $2.index); emitCode(codestr);
+			}
+		 }
+		 | WRITE vars { 
+			if ($2.t == m_int) {
+				sprintf(codestr, ".> %s", $2.name); emitCode(codestr); 
+		 	} else {
+				sprintf(codestr, ".[]> %s, %s", $2.name, $2.index); emitCode(codestr);
+			}
+		 }
 		 ;
 
 else_prime:		{} 
@@ -232,10 +260,11 @@ comp: EQ	{$$ = "==";}
 	;
 
 var: identifier { 
-   $$.name = $1; $$.t = m_int; 
+	$$.name = $1; $$.t = m_int; 
 }
    | identifier L_SQUARE_BRACKET expression R_SQUARE_BRACKET { 
 	if (!checkType($3.t, m_int)) reg_type_error("Array access expression is not of type int"); 
+	if (fetch($1)) if (!checkType(fetch($1)->type, m_array)) reg_type_error("Attempting to use an integer like an array");
 	$$.name = $1; $$.t = m_array; $$.index = $3.name;
 };
 
@@ -333,16 +362,30 @@ relation_expr:  expression comp expression {
 			 ;
 
 term: var  { 
-	if (fetch($1.name)) $$ = $1; 
-	if ($1.t == m_int) {
+	if (fetch($1.name)) {
+		$$ = $1; 
+	} else {
+		reg_type_error("Symbol does not exist in the symbol table");
+	}
+	int curr_type;
+	if (fetch($1.name)) {
+		curr_type = fetch($1.name)->type;
+	} else {
+		curr_type = $1.t;
+	}
+	if (curr_type == m_int) {
 		$$.name = newtemp(); 
 		sprintf(codestr, ". %s", $$.name); emitCode(codestr); 
 		sprintf(codestr, "= %s, %s", $$.name, $1.name); emitCode(codestr);
 	} else {
 		$$.name = newtemp();
 		sprintf(codestr, ". %s", $$.name); emitCode(codestr);
+		
+		if (!$1.index) 
+			reg_type_error("Used array variable missing a specified index");
+		
 		sprintf(codestr, "=[] %s, %s, %s", $$.name, $1.name, $1.index); emitCode(codestr);	
-		$$.t = m_array;
+		$$.t = m_int;
 	}
 	}
 	| INTEGER { 
@@ -357,16 +400,22 @@ term: var  {
 	$$ = $2; 
 	}
 	| SUB var %prec UMINUS { 
-	$$ = $2; //$$.name = "subtest2";
+	$$ = $2;
+	$$.name = newtemp();
+	sprintf(codestr, ". %s", $$.name); emitCode(codestr);
+	sprintf(codestr, "* %s, %s, -1", $$.name, $2.name); emitCode(codestr);
 	}
 	| SUB INTEGER %prec UMINUS { 
-	$$.t = m_int; //$$.name = "a"; 
+	$$.t = m_int;	
+	$$.name = newtemp();
+	sprintf(codestr, ". %s", $$.name); emitCode(codestr);
+	sprintf(codestr, "* %s, %d, -1", $$.name, (int)$2); emitCode(codestr);
 	}
 	| SUB L_PAREN expression R_PAREN %prec UMINUS { 
 	if (!checkType($3.t, m_int)) 
 		reg_type_error("Expression is not an int type"); 
 	$$.t = m_int; 
-	$$.name = "subtest";
+	//$$.name = "subtest";
 	}
 	| identifier L_PAREN expressions R_PAREN { 
 		$$.t = m_int;
@@ -374,6 +423,10 @@ term: var  {
 		sprintf(codestr, "param %s", $3.name); emitCode(codestr);
 		/*NOTE WILL PROBABLY NEED TO IMPLEMENT SPLIT EMIT FOR PARAMS*/
 		sprintf(codestr, ". %s", $$.name); emitCode(codestr);
+
+		if (!fetch($1)) {
+			reg_type_error("Function being called was not defined");
+		}
 		sprintf(codestr, "call %s, %s", $1, $$.name); emitCode(codestr);
 	}
 	;
@@ -394,8 +447,14 @@ int main(int argc, char** argv) {
 		}
 	}
 	yyparse();
-	if (errorCount > 0) {
-		//printf("WARNING: %d error(s) in the above contexts.\n", errorCount);
+
+	// Check errors
+	if (!fetch("main")) {
+		printf("ERROR: \'main\' function is not defined\n");
+	} else if (errorCount > 0) {
+		printf("ERROR: %d error(s) in the above contexts.\n", errorCount);
+	} else {
+		printCode();
 	}
 	return 0;
 }
