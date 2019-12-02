@@ -13,6 +13,10 @@
 	FILE * yyin;
 
 	int errorCount = 0;
+	void reg_type_error(char* msg) {
+		errorCount++;
+		printf("SEMANTIC ERROR (line %d): %s\n", curr_line, msg);
+	}
 
 	char* concat(const char *s1, const char *s2) {
 		char* result = malloc(strlen(s1) + strlen(s2) + 1);
@@ -21,9 +25,33 @@
 		return result;
 	}
 
-	void reg_type_error(char* msg) {
-		errorCount++;
-		printf("TYPE ERROR (line %d): %s\n", curr_line, msg);
+
+	int stackTop = -1;
+	char* loopStack[BUFFER_SIZE];
+	void pushLoopStack(char* val) {
+		stackTop++;
+		//printf("Pushing: %s...\n", val);
+		loopStack[stackTop] = val;
+	}
+
+	int isEmpty() {
+   		if(stackTop == -1)
+      		return 1;
+   		else
+      		return 0;
+	}
+
+	char* popLoopStack() {
+		if (isEmpty()) {
+			return 0;
+		}
+
+		char* data = loopStack[stackTop];
+		stackTop--;
+
+		//printf("%s\n", data);
+
+		return data;
 	}
 
 	// Handles declarations that were split by commas
@@ -53,6 +81,47 @@
 		}
 	}
 
+	void split_read(char* list, M_TYPE type, char* index) {
+		/*if ($2.t == m_int) {
+			sprintf(codestr, ".< %s", $2.name); emitCode(codestr); 
+	 	} else {
+			sprintf(codestr, ".[]< %s, %s", $2.name, $2.index); emitCode(codestr);			
+		}*/
+		char* ref = malloc(strlen(list) + 1);
+		strcpy(ref, list);
+		char * pch = strtok(ref, ",");
+		while(pch != NULL) {
+			if (type == m_int) {
+				sprintf(codestr, ".< %s", pch);
+				emitCode(codestr);
+			} else {
+				sprintf(codestr, ".[]< %s, %s", pch, index);
+				emitCode(codestr);
+			}
+			pch = strtok(NULL, ",");
+		}
+	}
+	
+	void split_write(char* list, M_TYPE type, char* index) {
+		/*if ($2.t == m_int) {
+			sprintf(codestr, ".< %s", $2.name); emitCode(codestr); 
+	 	} else {
+			sprintf(codestr, ".[]< %s, %s", $2.name, $2.index); emitCode(codestr);			
+		}*/
+		char* ref = malloc(strlen(list) + 1);
+		strcpy(ref, list);
+		char * pch = strtok(ref, ",");
+		while(pch != NULL) {
+			if (type == m_int) {
+				sprintf(codestr, ".> %s", pch);
+				emitCode(codestr);
+			} else {
+				sprintf(codestr, ".[]> %s, %s", pch, index);
+				emitCode(codestr);
+			}
+			pch = strtok(NULL, ",");
+		}
+	}
 	void split_param(char* list) {
 		int param_count = 0;
 		char* ref = malloc(strlen(list) + 1);
@@ -90,9 +159,12 @@
 	} elseif;
 
 	struct whileloop {
+		char* then_label;
+		char* else_label;
 		char* begin_label;
 		char* exit_label;
 		char* start_label;
+		char* continue_to;
 	} whileloop;
 }
 
@@ -104,6 +176,7 @@
 %type <string_list> identifier identifiers comp 
 %type <typeNode> var expression boolexpr term relation_expr expressions multiplicative_expr declaration declarations declaration_prime
 %type <typeNode> function vars relation_and_expr 
+%type <whileloop> statement statements
 %left ADD SUB
 %left MULT DIV MOD
 %nonassoc UMINUS
@@ -156,7 +229,11 @@ identifiers: identifier { $$ = $1; }
 
 identifier: IDENT { $$ = $1; };
 
-statements:		statement SEMICOLON {}
+statements:		statement SEMICOLON {
+		  		/*if ($1.continue_to) {
+		  			sprintf(codestr, ":= %s", $1.continue_to); emitCode(codestr);
+				}*/
+				}
 		  		| statement SEMICOLON statements {}
 				;
 
@@ -175,34 +252,41 @@ statement: var ASSIGN expression {
 			}
 			else {
 				sprintf(codestr, "=[] %s, %s, %s", $1.name, $3.name, $3.index); emitCode(codestr);
-			}		 
-         }
+			}
+	     }
 		 | RETURN expression { 
 			if (!checkType($2.t, m_int)) reg_type_error("Trying to return a non int type");
 			sprintf(codestr, "ret %s", $2.name); emitCode(codestr);
 		 }
-		 | CONTINUE { 
-		 	
+		 | CONTINUE {
+			char* target = popLoopStack();
+			if (!target)
+				reg_type_error("Continue statement outside of a loop statement");
+			else {
+				sprintf(codestr, ":= %s", target); emitCode(codestr);		
+		 	}
 		 }
 		 | IF boolexpr 
 		 {
 			char* else_label = newlabel();
-			$<elseif>$.else_label = else_label;
+			$<whileloop>$.else_label = else_label;
 			sprintf(codestr, "?:= %s, %s", else_label, $2.name); emitCode(codestr);
 		 	char* then_label = newlabel();
-			$<elseif>$.then_label = then_label;
+			$<whileloop>$.then_label = then_label;
 			sprintf(codestr, ":= %s", then_label); emitCode(codestr);
 		 } 
 		 THEN {
-			sprintf(codestr, ": %s", $<elseif>3.else_label); emitCode(codestr);
+			sprintf(codestr, ": %s", $<whileloop>3.else_label); emitCode(codestr);
 		 } statements {
-		 	sprintf(codestr, ": %s", $<elseif>3.then_label); emitCode(codestr);
+		 	sprintf(codestr, ": %s", $<whileloop>3.then_label); emitCode(codestr);
 		 } else_prime ENDIF { 
 			if ($2.t != m_bool) 
 				reg_type_error("If statement does not contain a boolean expression"); 
+		 	$$ = $6;
 		 }
 		 | {
 			$<whileloop>$.start_label = newlabel(); 
+			pushLoopStack($<whileloop>$.start_label);
 			sprintf(codestr, ": %s", $<whileloop>$.start_label); emitCode(codestr);
 		 } WHILE boolexpr
 		 { 
@@ -215,28 +299,37 @@ statement: var ASSIGN expression {
 		 } statements {
 		 	sprintf(codestr, ":= %s", $<whileloop>1.start_label); emitCode(codestr);
 		 } ENDLOOP {
-		 	sprintf(codestr, ": %s", $<whileloop>1.exit_label); emitCode(codestr);
+		 	$$ = $<whileloop>1;
+			$$.continue_to = $<whileloop>1.begin_label;
+			sprintf(codestr, ": %s", $<whileloop>1.exit_label); emitCode(codestr);
 		 }
 		 | {
 		 	$<whileloop>$.begin_label = newlabel();
 		 } DO BEGINLOOP {
+			pushLoopStack($<whileloop>1.begin_label);
 			sprintf(codestr, ": %s", $<whileloop>1.begin_label); emitCode(codestr);
 		 } statements ENDLOOP WHILE boolexpr {
 			sprintf(codestr, "?:= %s, %s", $<whileloop>1.begin_label, $8.name); emitCode(codestr);
+		 	$$ = $<whileloop>1;
+			$$.continue_to = $<whileloop>1.begin_label;
 		 }
 		 | READ vars { 
-			if ($2.t == m_int) {
+			/*if ($2.t == m_int) {
 				sprintf(codestr, ".< %s", $2.name); emitCode(codestr); 
 		 	} else {
 				sprintf(codestr, ".[]< %s, %s", $2.name, $2.index); emitCode(codestr);
-			}
+			}*/
+
+			split_read($2.name, $2.t, $2.index);
 		 }
 		 | WRITE vars { 
-			if ($2.t == m_int) {
+			/*if ($2.t == m_int) {
 				sprintf(codestr, ".> %s", $2.name); emitCode(codestr); 
 		 	} else {
 				sprintf(codestr, ".[]> %s, %s", $2.name, $2.index); emitCode(codestr);
-			}
+			}*/
+
+			split_write($2.name, $2.t, $2.index);
 		 }
 		 ;
 
@@ -244,8 +337,8 @@ else_prime:		{}
 		  |	ELSE statements	{}		
 		  ;
 
-vars: 	var {}
-	|	var COMMA vars {}
+vars: 	var { $$ = $1; }
+	|	var COMMA vars { $$.name = concat($$.name, concat(",", $3.name)); }
 	;
 
 comp: EQ	{$$ = "==";}
@@ -302,7 +395,7 @@ multiplicative_expr: term {}
 							reg_type_error("Expression uses non int types");
 						$$.name = newtemp();
 						sprintf(codestr, ". %s", $$.name); emitCode(codestr);
-						sprintf(codestr, "% %s, %s, %s", $$.name, $1.name, $3.name); emitCode(codestr);
+						sprintf(codestr, "%% %s, %s, %s", $$.name, $1.name, $3.name); emitCode(codestr);
 				   }
 				   ;
 
@@ -329,14 +422,15 @@ relation_expr:  expression comp expression {
 	char* temp_c = newtemp();
 	sprintf(codestr, ". %s", temp_c); emitCode(codestr);
 	sprintf(codestr, "%s %s, %s, %s", $2, temp_c, $1.name, $3.name); emitCode(codestr);
-	
 	$$.name = temp_c;
 	} 
 			 | TRUE { 
 	$$.t = m_bool; 
+	$$.name = "1";
 	}
 			 | FALSE {
-	$$.t = m_bool; 
+	$$.t = m_bool;
+	$$.name = "0"; 
 	}
 			 | L_PAREN boolexpr R_PAREN { 
 	$$.t = m_bool; 
@@ -346,15 +440,27 @@ relation_expr:  expression comp expression {
 	if (!(checkType($2.t, $4.t) && checkType($2.t, m_int))) 
 		reg_type_error("Comparison does not compare two int expressions"); 
 	$$.t = m_bool;
+
+	$$.name = newtemp();
+	sprintf(codestr, ". %s", $$.name); emitCode(codestr);
+	
+	char* temp = newtemp();
+	sprintf(temp, ". %s", temp); emitCode(codestr);
+	sprintf(codestr, "%s %s, %s, %s", $3, temp, $2.name, $4.name); emitCode(codestr);
+	sprintf(codestr, "! %s, %s", $$.name, temp); emitCode(codestr);
 	}
 			 | NOT TRUE { 
 	$$.t = m_bool; 
+	$$.name = "0";
 	}
 			 | NOT FALSE { 
 	$$.t = m_bool; 
+	$$.name = "1";
 	}
 			 | NOT L_PAREN boolexpr R_PAREN { 
 	$$.t = m_bool; 
+	$$.name = newtemp();
+	sprintf(codestr, "! %s, %s", $$.name, $3.name); emitCode(codestr);
 	}
 			 ;
 

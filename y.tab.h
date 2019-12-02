@@ -102,7 +102,7 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 75 "mini_l.y" /* yacc.c:1909  */
+#line 144 "mini_l.y" /* yacc.c:1909  */
 
 	double dval;
 	char* string_list;
@@ -121,12 +121,15 @@ union YYSTYPE
 	} elseif;
 
 	struct whileloop {
+		char* then_label;
+		char* else_label;
 		char* begin_label;
 		char* exit_label;
 		char* start_label;
+		char* continue_to;
 	} whileloop;
 
-#line 130 "y.tab.h" /* yacc.c:1909  */
+#line 133 "y.tab.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

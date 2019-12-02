@@ -78,6 +78,10 @@
 	FILE * yyin;
 
 	int errorCount = 0;
+	void reg_type_error(char* msg) {
+		errorCount++;
+		printf("SEMANTIC ERROR (line %d): %s\n", curr_line, msg);
+	}
 
 	char* concat(const char *s1, const char *s2) {
 		char* result = malloc(strlen(s1) + strlen(s2) + 1);
@@ -86,9 +90,33 @@
 		return result;
 	}
 
-	void reg_type_error(char* msg) {
-		errorCount++;
-		printf("TYPE ERROR (line %d): %s\n", curr_line, msg);
+
+	int stackTop = -1;
+	char* loopStack[BUFFER_SIZE];
+	void pushLoopStack(char* val) {
+		stackTop++;
+		//printf("Pushing: %s...\n", val);
+		loopStack[stackTop] = val;
+	}
+
+	int isEmpty() {
+   		if(stackTop == -1)
+      		return 1;
+   		else
+      		return 0;
+	}
+
+	char* popLoopStack() {
+		if (isEmpty()) {
+			return 0;
+		}
+
+		char* data = loopStack[stackTop];
+		stackTop--;
+
+		//printf("%s\n", data);
+
+		return data;
 	}
 
 	// Handles declarations that were split by commas
@@ -118,6 +146,47 @@
 		}
 	}
 
+	void split_read(char* list, M_TYPE type, char* index) {
+		/*if ($2.t == m_int) {
+			sprintf(codestr, ".< %s", $2.name); emitCode(codestr); 
+	 	} else {
+			sprintf(codestr, ".[]< %s, %s", $2.name, $2.index); emitCode(codestr);			
+		}*/
+		char* ref = malloc(strlen(list) + 1);
+		strcpy(ref, list);
+		char * pch = strtok(ref, ",");
+		while(pch != NULL) {
+			if (type == m_int) {
+				sprintf(codestr, ".< %s", pch);
+				emitCode(codestr);
+			} else {
+				sprintf(codestr, ".[]< %s, %s", pch, index);
+				emitCode(codestr);
+			}
+			pch = strtok(NULL, ",");
+		}
+	}
+	
+	void split_write(char* list, M_TYPE type, char* index) {
+		/*if ($2.t == m_int) {
+			sprintf(codestr, ".< %s", $2.name); emitCode(codestr); 
+	 	} else {
+			sprintf(codestr, ".[]< %s, %s", $2.name, $2.index); emitCode(codestr);			
+		}*/
+		char* ref = malloc(strlen(list) + 1);
+		strcpy(ref, list);
+		char * pch = strtok(ref, ",");
+		while(pch != NULL) {
+			if (type == m_int) {
+				sprintf(codestr, ".> %s", pch);
+				emitCode(codestr);
+			} else {
+				sprintf(codestr, ".[]> %s, %s", pch, index);
+				emitCode(codestr);
+			}
+			pch = strtok(NULL, ",");
+		}
+	}
 	void split_param(char* list) {
 		int param_count = 0;
 		char* ref = malloc(strlen(list) + 1);
@@ -136,7 +205,7 @@
 		return 0;
 	}	
 
-#line 140 "y.tab.c" /* yacc.c:339  */
+#line 209 "y.tab.c" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -228,7 +297,7 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 75 "mini_l.y" /* yacc.c:355  */
+#line 144 "mini_l.y" /* yacc.c:355  */
 
 	double dval;
 	char* string_list;
@@ -247,12 +316,15 @@ union YYSTYPE
 	} elseif;
 
 	struct whileloop {
+		char* then_label;
+		char* else_label;
 		char* begin_label;
 		char* exit_label;
 		char* start_label;
+		char* continue_to;
 	} whileloop;
 
-#line 256 "y.tab.c" /* yacc.c:355  */
+#line 328 "y.tab.c" /* yacc.c:355  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -269,7 +341,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 273 "y.tab.c" /* yacc.c:358  */
+#line 345 "y.tab.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -571,14 +643,14 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   112,   112,   113,   116,   119,   120,   123,   127,   123,
-     137,   138,   141,   147,   148,   153,   154,   157,   159,   160,
-     163,   180,   184,   188,   196,   198,   187,   204,   208,   213,
-     215,   204,   220,   222,   220,   227,   234,   243,   244,   247,
-     248,   251,   252,   253,   254,   255,   256,   259,   262,   268,
-     269,   276,   285,   286,   293,   300,   309,   310,   317,   318,
-     325,   335,   338,   341,   345,   350,   353,   356,   361,   388,
-     394,   399,   405,   411,   420,   434,   436
+       0,   185,   185,   186,   189,   192,   193,   196,   200,   196,
+     210,   211,   214,   220,   221,   226,   227,   230,   232,   237,
+     240,   257,   261,   270,   278,   280,   269,   287,   292,   297,
+     299,   287,   306,   308,   306,   316,   325,   336,   337,   340,
+     341,   344,   345,   346,   347,   348,   349,   352,   355,   361,
+     362,   369,   378,   379,   386,   393,   402,   403,   410,   411,
+     418,   427,   431,   435,   439,   452,   456,   460,   467,   494,
+     500,   505,   511,   517,   526,   540,   542
 };
 #endif
 
@@ -1461,133 +1533,137 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 112 "mini_l.y" /* yacc.c:1646  */
+#line 185 "mini_l.y" /* yacc.c:1646  */
     {}
-#line 1467 "y.tab.c" /* yacc.c:1646  */
+#line 1539 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 3:
-#line 113 "mini_l.y" /* yacc.c:1646  */
+#line 186 "mini_l.y" /* yacc.c:1646  */
     {}
-#line 1473 "y.tab.c" /* yacc.c:1646  */
+#line 1545 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 4:
-#line 116 "mini_l.y" /* yacc.c:1646  */
+#line 189 "mini_l.y" /* yacc.c:1646  */
     {}
-#line 1479 "y.tab.c" /* yacc.c:1646  */
+#line 1551 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 5:
-#line 119 "mini_l.y" /* yacc.c:1646  */
+#line 192 "mini_l.y" /* yacc.c:1646  */
     { }
-#line 1485 "y.tab.c" /* yacc.c:1646  */
+#line 1557 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 6:
-#line 120 "mini_l.y" /* yacc.c:1646  */
+#line 193 "mini_l.y" /* yacc.c:1646  */
     {}
-#line 1491 "y.tab.c" /* yacc.c:1646  */
+#line 1563 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 7:
-#line 123 "mini_l.y" /* yacc.c:1646  */
+#line 196 "mini_l.y" /* yacc.c:1646  */
     { 
 		sprintf(codestr, "func %s", (yyvsp[0].string_list)); 
 		emitCode(codestr); 
 		if (!insert((yyvsp[0].string_list), m_void)) {reg_type_error("Variable multiply defined");} 
 		}
-#line 1501 "y.tab.c" /* yacc.c:1646  */
+#line 1573 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 8:
-#line 127 "mini_l.y" /* yacc.c:1646  */
+#line 200 "mini_l.y" /* yacc.c:1646  */
     {
 		if ((yyvsp[0].typeNode).code) {
 			split_param((yyvsp[0].typeNode).code);
 		}
 		}
-#line 1511 "y.tab.c" /* yacc.c:1646  */
+#line 1583 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 9:
-#line 131 "mini_l.y" /* yacc.c:1646  */
+#line 204 "mini_l.y" /* yacc.c:1646  */
     { 
 		sprintf(codestr, "endfunc\n"); 
 		emitCode(codestr); 
 		}
-#line 1520 "y.tab.c" /* yacc.c:1646  */
+#line 1592 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 10:
-#line 137 "mini_l.y" /* yacc.c:1646  */
+#line 210 "mini_l.y" /* yacc.c:1646  */
     {(yyval.typeNode).code = 0;}
-#line 1526 "y.tab.c" /* yacc.c:1646  */
+#line 1598 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 11:
-#line 138 "mini_l.y" /* yacc.c:1646  */
+#line 211 "mini_l.y" /* yacc.c:1646  */
     {(yyval.typeNode) = (yyvsp[-2].typeNode);}
-#line 1532 "y.tab.c" /* yacc.c:1646  */
+#line 1604 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 12:
-#line 141 "mini_l.y" /* yacc.c:1646  */
+#line 214 "mini_l.y" /* yacc.c:1646  */
     { 
 		   	(yyval.typeNode).code = (yyvsp[-2].string_list);
 			split_insert((yyvsp[-2].string_list), (yyvsp[0].typeNode).t); 
 			split_emit((yyvsp[-2].string_list), (yyvsp[0].typeNode).t, (yyvsp[0].typeNode).size); 
 		  }
-#line 1542 "y.tab.c" /* yacc.c:1646  */
+#line 1614 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 13:
-#line 147 "mini_l.y" /* yacc.c:1646  */
+#line 220 "mini_l.y" /* yacc.c:1646  */
     { (yyval.typeNode).t = m_int; }
-#line 1548 "y.tab.c" /* yacc.c:1646  */
+#line 1620 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 14:
-#line 148 "mini_l.y" /* yacc.c:1646  */
+#line 221 "mini_l.y" /* yacc.c:1646  */
     { 
 					(yyval.typeNode).t = m_array; (yyval.typeNode).size = (int) (yyvsp[-3].dval);
  				 	if ((yyval.typeNode).size <= 0) reg_type_error("Invalid array size");
 				 }
-#line 1557 "y.tab.c" /* yacc.c:1646  */
+#line 1629 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 15:
-#line 153 "mini_l.y" /* yacc.c:1646  */
+#line 226 "mini_l.y" /* yacc.c:1646  */
     { (yyval.string_list) = (yyvsp[0].string_list); }
-#line 1563 "y.tab.c" /* yacc.c:1646  */
+#line 1635 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 16:
-#line 154 "mini_l.y" /* yacc.c:1646  */
+#line 227 "mini_l.y" /* yacc.c:1646  */
     { (yyval.string_list) = concat((yyval.string_list), concat(",", (yyvsp[0].string_list))); }
-#line 1569 "y.tab.c" /* yacc.c:1646  */
+#line 1641 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 17:
-#line 157 "mini_l.y" /* yacc.c:1646  */
+#line 230 "mini_l.y" /* yacc.c:1646  */
     { (yyval.string_list) = (yyvsp[0].string_list); }
-#line 1575 "y.tab.c" /* yacc.c:1646  */
+#line 1647 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 18:
-#line 159 "mini_l.y" /* yacc.c:1646  */
-    {}
-#line 1581 "y.tab.c" /* yacc.c:1646  */
+#line 232 "mini_l.y" /* yacc.c:1646  */
+    {
+		  		/*if ($1.continue_to) {
+		  			sprintf(codestr, ":= %s", $1.continue_to); emitCode(codestr);
+				}*/
+				}
+#line 1657 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 19:
-#line 160 "mini_l.y" /* yacc.c:1646  */
+#line 237 "mini_l.y" /* yacc.c:1646  */
     {}
-#line 1587 "y.tab.c" /* yacc.c:1646  */
+#line 1663 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 20:
-#line 163 "mini_l.y" /* yacc.c:1646  */
+#line 240 "mini_l.y" /* yacc.c:1646  */
     { 
 		 	if (fetch((yyvsp[-2].typeNode).name)) {
 				if (!( (checkType((yyvsp[-2].typeNode).t, m_int) && checkType((yyvsp[-2].typeNode).t, m_int)) || (checkType((yyvsp[-2].typeNode).t, m_array) && checkType((yyvsp[0].typeNode).t, m_int)) )) 
@@ -1603,244 +1679,260 @@ yyreduce:
 			}
 			else {
 				sprintf(codestr, "=[] %s, %s, %s", (yyvsp[-2].typeNode).name, (yyvsp[0].typeNode).name, (yyvsp[0].typeNode).index); emitCode(codestr);
-			}		 
-         }
-#line 1609 "y.tab.c" /* yacc.c:1646  */
+			}
+	     }
+#line 1685 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 21:
-#line 180 "mini_l.y" /* yacc.c:1646  */
+#line 257 "mini_l.y" /* yacc.c:1646  */
     { 
 			if (!checkType((yyvsp[0].typeNode).t, m_int)) reg_type_error("Trying to return a non int type");
 			sprintf(codestr, "ret %s", (yyvsp[0].typeNode).name); emitCode(codestr);
 		 }
-#line 1618 "y.tab.c" /* yacc.c:1646  */
+#line 1694 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 22:
-#line 184 "mini_l.y" /* yacc.c:1646  */
-    { 
-		 	
+#line 261 "mini_l.y" /* yacc.c:1646  */
+    {
+			char* target = popLoopStack();
+			if (!target)
+				reg_type_error("Continue statement outside of a loop statement");
+			else {
+			sprintf(codestr, ":= %s", target); emitCode(codestr);		
+		 	}
 		 }
-#line 1626 "y.tab.c" /* yacc.c:1646  */
+#line 1707 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 23:
-#line 188 "mini_l.y" /* yacc.c:1646  */
+#line 270 "mini_l.y" /* yacc.c:1646  */
     {
 			char* else_label = newlabel();
-			(yyval.elseif).else_label = else_label;
+			(yyval.whileloop).else_label = else_label;
 			sprintf(codestr, "?:= %s, %s", else_label, (yyvsp[0].typeNode).name); emitCode(codestr);
 		 	char* then_label = newlabel();
-			(yyval.elseif).then_label = then_label;
+			(yyval.whileloop).then_label = then_label;
 			sprintf(codestr, ":= %s", then_label); emitCode(codestr);
 		 }
-#line 1639 "y.tab.c" /* yacc.c:1646  */
+#line 1720 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 24:
-#line 196 "mini_l.y" /* yacc.c:1646  */
+#line 278 "mini_l.y" /* yacc.c:1646  */
     {
-			sprintf(codestr, ": %s", (yyvsp[-1].elseif).else_label); emitCode(codestr);
+			sprintf(codestr, ": %s", (yyvsp[-1].whileloop).else_label); emitCode(codestr);
 		 }
-#line 1647 "y.tab.c" /* yacc.c:1646  */
+#line 1728 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 25:
-#line 198 "mini_l.y" /* yacc.c:1646  */
+#line 280 "mini_l.y" /* yacc.c:1646  */
     {
-		 	sprintf(codestr, ": %s", (yyvsp[-3].elseif).then_label); emitCode(codestr);
+		 	sprintf(codestr, ": %s", (yyvsp[-3].whileloop).then_label); emitCode(codestr);
 		 }
-#line 1655 "y.tab.c" /* yacc.c:1646  */
+#line 1736 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 26:
-#line 200 "mini_l.y" /* yacc.c:1646  */
+#line 282 "mini_l.y" /* yacc.c:1646  */
     { 
 			if ((yyvsp[-7].typeNode).t != m_bool) 
 				reg_type_error("If statement does not contain a boolean expression"); 
+		 	(yyval.whileloop) = (yyvsp[-3].whileloop);
 		 }
-#line 1664 "y.tab.c" /* yacc.c:1646  */
+#line 1746 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 27:
-#line 204 "mini_l.y" /* yacc.c:1646  */
+#line 287 "mini_l.y" /* yacc.c:1646  */
     {
 			(yyval.whileloop).start_label = newlabel(); 
+			pushLoopStack((yyval.whileloop).start_label);
 			sprintf(codestr, ": %s", (yyval.whileloop).start_label); emitCode(codestr);
 		 }
-#line 1673 "y.tab.c" /* yacc.c:1646  */
+#line 1756 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 28:
-#line 208 "mini_l.y" /* yacc.c:1646  */
+#line 292 "mini_l.y" /* yacc.c:1646  */
     { 
 			(yyvsp[-2].whileloop).begin_label = newlabel();
 			sprintf(codestr, "?:= %s, %s", (yyvsp[-2].whileloop).begin_label, (yyvsp[0].typeNode).name); emitCode(codestr);
 			(yyvsp[-2].whileloop).exit_label = newlabel();
 			sprintf(codestr, ":= %s", (yyvsp[-2].whileloop).exit_label); emitCode(codestr);
 		 }
-#line 1684 "y.tab.c" /* yacc.c:1646  */
+#line 1767 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 29:
-#line 213 "mini_l.y" /* yacc.c:1646  */
+#line 297 "mini_l.y" /* yacc.c:1646  */
     {
 			sprintf(codestr, ": %s", (yyvsp[-4].whileloop).begin_label); emitCode(codestr);
 		 }
-#line 1692 "y.tab.c" /* yacc.c:1646  */
+#line 1775 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 30:
-#line 215 "mini_l.y" /* yacc.c:1646  */
+#line 299 "mini_l.y" /* yacc.c:1646  */
     {
 		 	sprintf(codestr, ":= %s", (yyvsp[-6].whileloop).start_label); emitCode(codestr);
 		 }
-#line 1700 "y.tab.c" /* yacc.c:1646  */
+#line 1783 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 31:
-#line 217 "mini_l.y" /* yacc.c:1646  */
+#line 301 "mini_l.y" /* yacc.c:1646  */
     {
-		 	sprintf(codestr, ": %s", (yyvsp[-8].whileloop).exit_label); emitCode(codestr);
+		 	(yyval.whileloop) = (yyvsp[-8].whileloop);
+			(yyval.whileloop).continue_to = (yyvsp[-8].whileloop).begin_label;
+			sprintf(codestr, ": %s", (yyvsp[-8].whileloop).exit_label); emitCode(codestr);
 		 }
-#line 1708 "y.tab.c" /* yacc.c:1646  */
+#line 1793 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 32:
-#line 220 "mini_l.y" /* yacc.c:1646  */
+#line 306 "mini_l.y" /* yacc.c:1646  */
     {
 		 	(yyval.whileloop).begin_label = newlabel();
 		 }
-#line 1716 "y.tab.c" /* yacc.c:1646  */
+#line 1801 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 33:
-#line 222 "mini_l.y" /* yacc.c:1646  */
+#line 308 "mini_l.y" /* yacc.c:1646  */
     {
+			pushLoopStack((yyvsp[-2].whileloop).begin_label);
 			sprintf(codestr, ": %s", (yyvsp[-2].whileloop).begin_label); emitCode(codestr);
 		 }
-#line 1724 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 34:
-#line 224 "mini_l.y" /* yacc.c:1646  */
-    {
-			sprintf(codestr, "?:= %s, %s", (yyvsp[-7].whileloop).begin_label, (yyvsp[0].typeNode).name); emitCode(codestr);
-		 }
-#line 1732 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 35:
-#line 227 "mini_l.y" /* yacc.c:1646  */
-    { 
-			if ((yyvsp[0].typeNode).t == m_int) {
-				sprintf(codestr, ".< %s", (yyvsp[0].typeNode).name); emitCode(codestr); 
-		 	} else {
-				sprintf(codestr, ".[]< %s, %s", (yyvsp[0].typeNode).name, (yyvsp[0].typeNode).index); emitCode(codestr);
-			}
-		 }
-#line 1744 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 36:
-#line 234 "mini_l.y" /* yacc.c:1646  */
-    { 
-			if ((yyvsp[0].typeNode).t == m_int) {
-				sprintf(codestr, ".> %s", (yyvsp[0].typeNode).name); emitCode(codestr); 
-		 	} else {
-				sprintf(codestr, ".[]> %s, %s", (yyvsp[0].typeNode).name, (yyvsp[0].typeNode).index); emitCode(codestr);
-			}
-		 }
-#line 1756 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 37:
-#line 243 "mini_l.y" /* yacc.c:1646  */
-    {}
-#line 1762 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 38:
-#line 244 "mini_l.y" /* yacc.c:1646  */
-    {}
-#line 1768 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 39:
-#line 247 "mini_l.y" /* yacc.c:1646  */
-    {}
-#line 1774 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 40:
-#line 248 "mini_l.y" /* yacc.c:1646  */
-    {}
-#line 1780 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 41:
-#line 251 "mini_l.y" /* yacc.c:1646  */
-    {(yyval.string_list) = "==";}
-#line 1786 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 42:
-#line 252 "mini_l.y" /* yacc.c:1646  */
-    {(yyval.string_list) = "!=";}
-#line 1792 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 43:
-#line 253 "mini_l.y" /* yacc.c:1646  */
-    {(yyval.string_list) = "<";}
-#line 1798 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 44:
-#line 254 "mini_l.y" /* yacc.c:1646  */
-    {(yyval.string_list) = ">";}
-#line 1804 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 45:
-#line 255 "mini_l.y" /* yacc.c:1646  */
-    {(yyval.string_list) = "<=";}
 #line 1810 "y.tab.c" /* yacc.c:1646  */
     break;
 
+  case 34:
+#line 311 "mini_l.y" /* yacc.c:1646  */
+    {
+			sprintf(codestr, "?:= %s, %s", (yyvsp[-7].whileloop).begin_label, (yyvsp[0].typeNode).name); emitCode(codestr);
+		 	(yyval.whileloop) = (yyvsp[-7].whileloop);
+			(yyval.whileloop).continue_to = (yyvsp[-7].whileloop).begin_label;
+		 }
+#line 1820 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 35:
+#line 316 "mini_l.y" /* yacc.c:1646  */
+    { 
+			/*if ($2.t == m_int) {
+				sprintf(codestr, ".< %s", $2.name); emitCode(codestr); 
+		 	} else {
+				sprintf(codestr, ".[]< %s, %s", $2.name, $2.index); emitCode(codestr);
+			}*/
+
+			split_read((yyvsp[0].typeNode).name, (yyvsp[0].typeNode).t, (yyvsp[0].typeNode).index);
+		 }
+#line 1834 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 36:
+#line 325 "mini_l.y" /* yacc.c:1646  */
+    { 
+			/*if ($2.t == m_int) {
+				sprintf(codestr, ".> %s", $2.name); emitCode(codestr); 
+		 	} else {
+				sprintf(codestr, ".[]> %s, %s", $2.name, $2.index); emitCode(codestr);
+			}*/
+
+			split_write((yyvsp[0].typeNode).name, (yyvsp[0].typeNode).t, (yyvsp[0].typeNode).index);
+		 }
+#line 1848 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 37:
+#line 336 "mini_l.y" /* yacc.c:1646  */
+    {}
+#line 1854 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 38:
+#line 337 "mini_l.y" /* yacc.c:1646  */
+    {}
+#line 1860 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 39:
+#line 340 "mini_l.y" /* yacc.c:1646  */
+    { (yyval.typeNode) = (yyvsp[0].typeNode); }
+#line 1866 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 40:
+#line 341 "mini_l.y" /* yacc.c:1646  */
+    { (yyval.typeNode).name = concat((yyval.typeNode).name, concat(",", (yyvsp[0].typeNode).name)); }
+#line 1872 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 41:
+#line 344 "mini_l.y" /* yacc.c:1646  */
+    {(yyval.string_list) = "==";}
+#line 1878 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 42:
+#line 345 "mini_l.y" /* yacc.c:1646  */
+    {(yyval.string_list) = "!=";}
+#line 1884 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 43:
+#line 346 "mini_l.y" /* yacc.c:1646  */
+    {(yyval.string_list) = "<";}
+#line 1890 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 44:
+#line 347 "mini_l.y" /* yacc.c:1646  */
+    {(yyval.string_list) = ">";}
+#line 1896 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 45:
+#line 348 "mini_l.y" /* yacc.c:1646  */
+    {(yyval.string_list) = "<=";}
+#line 1902 "y.tab.c" /* yacc.c:1646  */
+    break;
+
   case 46:
-#line 256 "mini_l.y" /* yacc.c:1646  */
+#line 349 "mini_l.y" /* yacc.c:1646  */
     {(yyval.string_list) = ">=";}
-#line 1816 "y.tab.c" /* yacc.c:1646  */
+#line 1908 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 47:
-#line 259 "mini_l.y" /* yacc.c:1646  */
+#line 352 "mini_l.y" /* yacc.c:1646  */
     { 
 	(yyval.typeNode).name = (yyvsp[0].string_list); (yyval.typeNode).t = m_int; 
 }
-#line 1824 "y.tab.c" /* yacc.c:1646  */
+#line 1916 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 48:
-#line 262 "mini_l.y" /* yacc.c:1646  */
+#line 355 "mini_l.y" /* yacc.c:1646  */
     { 
 	if (!checkType((yyvsp[-1].typeNode).t, m_int)) reg_type_error("Array access expression is not of type int"); 
 	if (fetch((yyvsp[-3].string_list))) if (!checkType(fetch((yyvsp[-3].string_list))->type, m_array)) reg_type_error("Attempting to use an integer like an array");
 	(yyval.typeNode).name = (yyvsp[-3].string_list); (yyval.typeNode).t = m_array; (yyval.typeNode).index = (yyvsp[-1].typeNode).name;
 }
-#line 1834 "y.tab.c" /* yacc.c:1646  */
+#line 1926 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 49:
-#line 268 "mini_l.y" /* yacc.c:1646  */
+#line 361 "mini_l.y" /* yacc.c:1646  */
     {}
-#line 1840 "y.tab.c" /* yacc.c:1646  */
+#line 1932 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 50:
-#line 269 "mini_l.y" /* yacc.c:1646  */
+#line 362 "mini_l.y" /* yacc.c:1646  */
     {
 			if (!(checkType((yyvsp[-2].typeNode).t, (yyvsp[0].typeNode).t) && checkType((yyvsp[-2].typeNode).t, m_int)))
 				reg_type_error("Expression uses non int types");
@@ -1848,11 +1940,11 @@ yyreduce:
 			sprintf(codestr, ". %s", (yyval.typeNode).name); emitCode(codestr);
 			sprintf(codestr, "+ %s, %s, %s", (yyval.typeNode).name, (yyvsp[-2].typeNode).name, (yyvsp[0].typeNode).name); emitCode(codestr);
 		  }
-#line 1852 "y.tab.c" /* yacc.c:1646  */
+#line 1944 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 51:
-#line 276 "mini_l.y" /* yacc.c:1646  */
+#line 369 "mini_l.y" /* yacc.c:1646  */
     {
 		  	if (!(checkType((yyvsp[-2].typeNode).t, (yyvsp[0].typeNode).t) && checkType((yyvsp[-2].typeNode).t, m_int)))
 				reg_type_error("Expression uses non int types");
@@ -1860,17 +1952,17 @@ yyreduce:
 			sprintf(codestr, ". %s", (yyval.typeNode).name); emitCode(codestr);
 			sprintf(codestr, "- %s, %s, %s", (yyval.typeNode).name, (yyvsp[-2].typeNode).name, (yyvsp[0].typeNode).name); emitCode(codestr);
 		  }
-#line 1864 "y.tab.c" /* yacc.c:1646  */
+#line 1956 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 52:
-#line 285 "mini_l.y" /* yacc.c:1646  */
+#line 378 "mini_l.y" /* yacc.c:1646  */
     {}
-#line 1870 "y.tab.c" /* yacc.c:1646  */
+#line 1962 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 53:
-#line 286 "mini_l.y" /* yacc.c:1646  */
+#line 379 "mini_l.y" /* yacc.c:1646  */
     {
 				   		if (!(checkType((yyvsp[-2].typeNode).t, (yyvsp[0].typeNode).t) && checkType((yyvsp[-2].typeNode).t, m_int)))
 							reg_type_error("Expression uses non int types");
@@ -1878,11 +1970,11 @@ yyreduce:
 						sprintf(codestr, ". %s", (yyval.typeNode).name); emitCode(codestr);
 						sprintf(codestr, "* %s, %s, %s", (yyval.typeNode).name, (yyvsp[-2].typeNode).name, (yyvsp[0].typeNode).name); emitCode(codestr);
 				   }
-#line 1882 "y.tab.c" /* yacc.c:1646  */
+#line 1974 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 54:
-#line 293 "mini_l.y" /* yacc.c:1646  */
+#line 386 "mini_l.y" /* yacc.c:1646  */
     {
 						if (!(checkType((yyvsp[-2].typeNode).t, (yyvsp[0].typeNode).t) && checkType((yyvsp[-2].typeNode).t, m_int)))
 							reg_type_error("Expression uses non int types");
@@ -1890,55 +1982,55 @@ yyreduce:
 						sprintf(codestr, ". %s", (yyval.typeNode).name); emitCode(codestr);
 						sprintf(codestr, "/ %s, %s, %s", (yyval.typeNode).name, (yyvsp[-2].typeNode).name, (yyvsp[0].typeNode).name); emitCode(codestr);
 				   }
-#line 1894 "y.tab.c" /* yacc.c:1646  */
+#line 1986 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 55:
-#line 300 "mini_l.y" /* yacc.c:1646  */
+#line 393 "mini_l.y" /* yacc.c:1646  */
     {
 						if (!(checkType((yyvsp[-2].typeNode).t, (yyvsp[0].typeNode).t) && checkType((yyvsp[-2].typeNode).t, m_int)))
 							reg_type_error("Expression uses non int types");
 						(yyval.typeNode).name = newtemp();
 						sprintf(codestr, ". %s", (yyval.typeNode).name); emitCode(codestr);
-						sprintf(codestr, "% %s, %s, %s", (yyval.typeNode).name, (yyvsp[-2].typeNode).name, (yyvsp[0].typeNode).name); emitCode(codestr);
+						sprintf(codestr, "%% %s, %s, %s", (yyval.typeNode).name, (yyvsp[-2].typeNode).name, (yyvsp[0].typeNode).name); emitCode(codestr);
 				   }
-#line 1906 "y.tab.c" /* yacc.c:1646  */
+#line 1998 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 56:
-#line 309 "mini_l.y" /* yacc.c:1646  */
+#line 402 "mini_l.y" /* yacc.c:1646  */
     { (yyval.typeNode) = (yyvsp[0].typeNode); }
-#line 1912 "y.tab.c" /* yacc.c:1646  */
+#line 2004 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 57:
-#line 310 "mini_l.y" /* yacc.c:1646  */
+#line 403 "mini_l.y" /* yacc.c:1646  */
     {
 			(yyval.typeNode).name = newtemp();
 			sprintf(codestr, ". %s", (yyval.typeNode).name); emitCode(codestr);
 			sprintf(codestr, "|| %s, %s, %s", (yyval.typeNode).name, (yyvsp[-2].typeNode).name, (yyvsp[0].typeNode).name); emitCode(codestr);
 		}
-#line 1922 "y.tab.c" /* yacc.c:1646  */
+#line 2014 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 58:
-#line 317 "mini_l.y" /* yacc.c:1646  */
+#line 410 "mini_l.y" /* yacc.c:1646  */
     { (yyval.typeNode) = (yyvsp[0].typeNode); }
-#line 1928 "y.tab.c" /* yacc.c:1646  */
+#line 2020 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 59:
-#line 318 "mini_l.y" /* yacc.c:1646  */
+#line 411 "mini_l.y" /* yacc.c:1646  */
     {
 					(yyval.typeNode).name = newtemp();
 				 	sprintf(codestr, ". %s", (yyval.typeNode).name); emitCode(codestr);
 				 	sprintf(codestr, "&& %s, %s, %s", (yyval.typeNode).name, (yyvsp[-2].typeNode).name, (yyvsp[0].typeNode).name); emitCode(codestr);
 	 		     }
-#line 1938 "y.tab.c" /* yacc.c:1646  */
+#line 2030 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 60:
-#line 325 "mini_l.y" /* yacc.c:1646  */
+#line 418 "mini_l.y" /* yacc.c:1646  */
     { 
 	if (!(checkType((yyvsp[-2].typeNode).t, (yyvsp[0].typeNode).t) && checkType((yyvsp[-2].typeNode).t, m_int))) 
 		reg_type_error("Comparison does not compare two int expressions"); 
@@ -1946,73 +2038,86 @@ yyreduce:
 	char* temp_c = newtemp();
 	sprintf(codestr, ". %s", temp_c); emitCode(codestr);
 	sprintf(codestr, "%s %s, %s, %s", (yyvsp[-1].string_list), temp_c, (yyvsp[-2].typeNode).name, (yyvsp[0].typeNode).name); emitCode(codestr);
-	
 	(yyval.typeNode).name = temp_c;
 	}
-#line 1953 "y.tab.c" /* yacc.c:1646  */
+#line 2044 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 61:
-#line 335 "mini_l.y" /* yacc.c:1646  */
+#line 427 "mini_l.y" /* yacc.c:1646  */
     { 
 	(yyval.typeNode).t = m_bool; 
+	(yyval.typeNode).name = "1";
 	}
-#line 1961 "y.tab.c" /* yacc.c:1646  */
+#line 2053 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 62:
-#line 338 "mini_l.y" /* yacc.c:1646  */
+#line 431 "mini_l.y" /* yacc.c:1646  */
     {
-	(yyval.typeNode).t = m_bool; 
+	(yyval.typeNode).t = m_bool;
+	(yyval.typeNode).name = "0"; 
 	}
-#line 1969 "y.tab.c" /* yacc.c:1646  */
+#line 2062 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 63:
-#line 341 "mini_l.y" /* yacc.c:1646  */
+#line 435 "mini_l.y" /* yacc.c:1646  */
     { 
 	(yyval.typeNode).t = m_bool; 
 	(yyval.typeNode).name = (yyvsp[-1].typeNode).name; 
 	}
-#line 1978 "y.tab.c" /* yacc.c:1646  */
+#line 2071 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 64:
-#line 345 "mini_l.y" /* yacc.c:1646  */
+#line 439 "mini_l.y" /* yacc.c:1646  */
     { 
 	if (!(checkType((yyvsp[-2].typeNode).t, (yyvsp[0].typeNode).t) && checkType((yyvsp[-2].typeNode).t, m_int))) 
 		reg_type_error("Comparison does not compare two int expressions"); 
 	(yyval.typeNode).t = m_bool;
+
+	(yyval.typeNode).name = newtemp();
+	sprintf(codestr, ". %s", (yyval.typeNode).name); emitCode(codestr);
+	
+	char* temp = newtemp();
+	sprintf(temp, ". %s", temp); emitCode(codestr);
+	sprintf(codestr, "%s %s, %s, %s", (yyvsp[-1].string_list), temp, (yyvsp[-2].typeNode).name, (yyvsp[0].typeNode).name); emitCode(codestr);
+	sprintf(codestr, "! %s, %s", (yyval.typeNode).name, temp); emitCode(codestr);
 	}
-#line 1988 "y.tab.c" /* yacc.c:1646  */
+#line 2089 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 65:
-#line 350 "mini_l.y" /* yacc.c:1646  */
+#line 452 "mini_l.y" /* yacc.c:1646  */
     { 
 	(yyval.typeNode).t = m_bool; 
+	(yyval.typeNode).name = "0";
 	}
-#line 1996 "y.tab.c" /* yacc.c:1646  */
+#line 2098 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 66:
-#line 353 "mini_l.y" /* yacc.c:1646  */
+#line 456 "mini_l.y" /* yacc.c:1646  */
     { 
 	(yyval.typeNode).t = m_bool; 
+	(yyval.typeNode).name = "1";
 	}
-#line 2004 "y.tab.c" /* yacc.c:1646  */
+#line 2107 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 67:
-#line 356 "mini_l.y" /* yacc.c:1646  */
+#line 460 "mini_l.y" /* yacc.c:1646  */
     { 
 	(yyval.typeNode).t = m_bool; 
+	(yyval.typeNode).name = newtemp();
+	sprintf(codestr, "! %s, %s", (yyval.typeNode).name, (yyvsp[-1].typeNode).name); emitCode(codestr);
 	}
-#line 2012 "y.tab.c" /* yacc.c:1646  */
+#line 2117 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 68:
-#line 361 "mini_l.y" /* yacc.c:1646  */
+#line 467 "mini_l.y" /* yacc.c:1646  */
     { 
 	if (fetch((yyvsp[0].typeNode).name)) {
 		(yyval.typeNode) = (yyvsp[0].typeNode); 
@@ -2040,54 +2145,54 @@ yyreduce:
 		(yyval.typeNode).t = m_int;
 	}
 	}
-#line 2044 "y.tab.c" /* yacc.c:1646  */
+#line 2149 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 69:
-#line 388 "mini_l.y" /* yacc.c:1646  */
+#line 494 "mini_l.y" /* yacc.c:1646  */
     { 
 	(yyval.typeNode).t = m_int; 
 	(yyval.typeNode).name = newtemp();	
 	sprintf(codestr, ". %s", (yyval.typeNode).name); emitCode(codestr); 
 	sprintf(codestr, "= %s, %d", (yyval.typeNode).name, (int)(yyvsp[0].dval)); emitCode(codestr);
 	}
-#line 2055 "y.tab.c" /* yacc.c:1646  */
+#line 2160 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 70:
-#line 394 "mini_l.y" /* yacc.c:1646  */
+#line 500 "mini_l.y" /* yacc.c:1646  */
     { 
 	if (!checkType((yyvsp[-1].typeNode).t, m_int)) 
 		reg_type_error("Expression is not an int type"); 
 	(yyval.typeNode) = (yyvsp[-1].typeNode); 
 	}
-#line 2065 "y.tab.c" /* yacc.c:1646  */
+#line 2170 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 71:
-#line 399 "mini_l.y" /* yacc.c:1646  */
+#line 505 "mini_l.y" /* yacc.c:1646  */
     { 
 	(yyval.typeNode) = (yyvsp[0].typeNode);
 	(yyval.typeNode).name = newtemp();
 	sprintf(codestr, ". %s", (yyval.typeNode).name); emitCode(codestr);
 	sprintf(codestr, "* %s, %s, -1", (yyval.typeNode).name, (yyvsp[0].typeNode).name); emitCode(codestr);
 	}
-#line 2076 "y.tab.c" /* yacc.c:1646  */
+#line 2181 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 72:
-#line 405 "mini_l.y" /* yacc.c:1646  */
+#line 511 "mini_l.y" /* yacc.c:1646  */
     { 
 	(yyval.typeNode).t = m_int;	
 	(yyval.typeNode).name = newtemp();
 	sprintf(codestr, ". %s", (yyval.typeNode).name); emitCode(codestr);
 	sprintf(codestr, "* %s, %d, -1", (yyval.typeNode).name, (int)(yyvsp[0].dval)); emitCode(codestr);
 	}
-#line 2087 "y.tab.c" /* yacc.c:1646  */
+#line 2192 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 73:
-#line 411 "mini_l.y" /* yacc.c:1646  */
+#line 517 "mini_l.y" /* yacc.c:1646  */
     { 
 	if (!checkType((yyvsp[-1].typeNode).t, m_int)) 
 		reg_type_error("Expression is not an int type"); 
@@ -2097,11 +2202,11 @@ yyreduce:
 	sprintf(codestr, ". %s", (yyval.typeNode).name); emitCode(codestr);
 	sprintf(codestr, "* %s, %s, -1", (yyval.typeNode).name, (yyvsp[-1].typeNode).name); emitCode(codestr);
     }
-#line 2101 "y.tab.c" /* yacc.c:1646  */
+#line 2206 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 74:
-#line 420 "mini_l.y" /* yacc.c:1646  */
+#line 526 "mini_l.y" /* yacc.c:1646  */
     { 
 		(yyval.typeNode).t = m_int;
 		(yyval.typeNode).name = newtemp();	
@@ -2114,24 +2219,24 @@ yyreduce:
 		}
 		sprintf(codestr, "call %s, %s", (yyvsp[-3].string_list), (yyval.typeNode).name); emitCode(codestr);
 	}
-#line 2118 "y.tab.c" /* yacc.c:1646  */
+#line 2223 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 75:
-#line 434 "mini_l.y" /* yacc.c:1646  */
+#line 540 "mini_l.y" /* yacc.c:1646  */
     { 
 		   }
-#line 2125 "y.tab.c" /* yacc.c:1646  */
+#line 2230 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 76:
-#line 436 "mini_l.y" /* yacc.c:1646  */
+#line 542 "mini_l.y" /* yacc.c:1646  */
     {}
-#line 2131 "y.tab.c" /* yacc.c:1646  */
+#line 2236 "y.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 2135 "y.tab.c" /* yacc.c:1646  */
+#line 2240 "y.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2359,7 +2464,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 439 "mini_l.y" /* yacc.c:1906  */
+#line 545 "mini_l.y" /* yacc.c:1906  */
 
 
 int main(int argc, char** argv) {
