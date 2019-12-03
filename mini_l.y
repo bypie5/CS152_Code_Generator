@@ -304,31 +304,21 @@ statement: var ASSIGN expression {
 			sprintf(codestr, ": %s", $<whileloop>1.exit_label); emitCode(codestr);
 		 }
 		 | {
-		 	$<whileloop>$.begin_label = newlabel();
+			$<whileloop>$.continue_to = newlabel();
+			pushLoopStack($<whileloop>$.continue_to);
+			$<whileloop>$.begin_label = newlabel();
 		 } DO BEGINLOOP {
-			pushLoopStack($<whileloop>1.begin_label);
 			sprintf(codestr, ": %s", $<whileloop>1.begin_label); emitCode(codestr);
-		 } statements ENDLOOP WHILE boolexpr {
-			sprintf(codestr, "?:= %s, %s", $<whileloop>1.begin_label, $8.name); emitCode(codestr);
+		 } statements ENDLOOP WHILE {
+		 	sprintf(codestr, ": %s", $<whileloop>1.continue_to); emitCode(codestr);
+		 } boolexpr {
+			sprintf(codestr, "?:= %s, %s", $<whileloop>1.begin_label, $9.name); emitCode(codestr);
 		 	$$ = $<whileloop>1;
-			$$.continue_to = $<whileloop>1.begin_label;
 		 }
 		 | READ vars { 
-			/*if ($2.t == m_int) {
-				sprintf(codestr, ".< %s", $2.name); emitCode(codestr); 
-		 	} else {
-				sprintf(codestr, ".[]< %s, %s", $2.name, $2.index); emitCode(codestr);
-			}*/
-
 			split_read($2.name, $2.t, $2.index);
 		 }
 		 | WRITE vars { 
-			/*if ($2.t == m_int) {
-				sprintf(codestr, ".> %s", $2.name); emitCode(codestr); 
-		 	} else {
-				sprintf(codestr, ".[]> %s, %s", $2.name, $2.index); emitCode(codestr);
-			}*/
-
 			split_write($2.name, $2.t, $2.index);
 		 }
 		 ;
@@ -500,7 +490,10 @@ term: var  {
 	| L_PAREN expression R_PAREN { 
 	if (!checkType($2.t, m_int)) 
 		reg_type_error("Expression is not an int type"); 
-	$$ = $2; 
+	$$ = $2;
+	$$.name = newtemp();
+	sprintf(codestr, ". %s", $$.name); emitCode(codestr);
+	sprintf(codestr, "= %s, %s", $$.name, $2.name); emitCode(codestr);;
 	}
 	| SUB var %prec UMINUS { 
 	$$ = $2;
